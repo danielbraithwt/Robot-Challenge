@@ -8,7 +8,7 @@ int pins[] = { 13, 12, 11, 10, 9, 8, 7, 6, 5 };
 unsigned int output[9];
 
 // Create the sensor object
-QTRSensorsRC qtr((unsigned char[]) { 13, 12, 11, 10, 9, 8, 7, 6, 5 }, numOfSensors);
+QTRSensorsRC qtr((unsigned char[]) {2,4,5,6,7,8,9,10}, numOfSensors);
 
 void setup()
 {
