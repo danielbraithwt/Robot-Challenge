@@ -29,41 +29,61 @@ void setup()
   analogWrite(pwm_b, 0);
   Serial.begin(9600);     // for communacations with computer
   
-  //Serial.println("Starting callabration in 3 seconds");
-  //delay(3000);
-  
-  // Calabrate the sensors
-  //Serial.println("Callabrating.... Expose all your sensors to the diffrent extremes");
-  
-  //for( int i = 0; i < i < 250; i++ )
-  //{
-  //  qtr.calibrate();
-  //  delay(20);
-  //}
-  
-  //Serial.println("Callbration finished");
+  Serial.println("Starting in 3 seconds");
+  delay(3000);
   
 }
 
 void loop()
 {
   // Get the position of the line
-  int pos = qtr.readLine(output, 1);
+  qtr.readLine(output);
   
-  // Calculate the error
-  int error = pos - 5000;
+  int normOutput[9];
   
-  Serial.print("Error: ");
+  // Normalise the output into 1 ( white ) and 0 ( black )
+  for( int i = 0; i < sizeof(output); i++ )
+  {
+    if( output[i] > 550 ) normOutput[i] = 0;
+    else normOutput[i] = 1;
+  }
+  
+  // Sum up the sensor values 
+  int average = 0;
+  int count = 0;
+  
+  for( int i = 0; i < sizeof(normOutput); i++ )
+  {
+    average += ( i * 1000 ) * normOutput[i];
+    count += normOutput[i];
+  } 
+  
+  // Calculate the average
+  average = average / count;
+  
+  // Calculate the error, ie the diffrence between the middle and the average
+  int error = 4000 - average;
+  
+  // Calculate the ammount to change direction by, devide by 100 because a
+  // change in the thousands is far to big
+  int delta = abs(error/100);
+  
+  Serial.print("[*] Error: ");
   Serial.println(error);
   
+  // If error is less than 0 then that means that the line towards the right of the sensors
   if( error < 0 )
   {
-    Left(error/1000);
+    Serial.println("[*] Turning Right");
+    Right(delta);
   }
+  // This means the line is to the left of the sensors
   else if( error > 0 )
   {
-    Right(error/1000);
+    Serial.println("[*] Turning Left");
+    Left(delta);
   }
+  
   Forward(100);
   
   delay(50);
