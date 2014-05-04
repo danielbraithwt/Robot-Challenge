@@ -72,19 +72,29 @@ void loop()
   Serial.println(error);
   
   // If error is less than 0 then that means that the line towards the right of the sensors
+  
+  int left = 100;
+  int right = 100;
+  
   if( error < 0 )
   {
     Serial.println("[*] Turning Right");
-    Right(delta);
+    right += delta;
+    left -= delta;
+    //Right(delta);
   }
   // This means the line is to the left of the sensors
   else if( error > 0 )
   {
     Serial.println("[*] Turning Left");
-    Left(delta);
+    right -= delta;
+    left += delta;
+    //Left(delta);
   }
   
-  Forward(100);
+  Left(left);
+  Right(right);
+  //Forward(100);
   
   delay(50);
 }
