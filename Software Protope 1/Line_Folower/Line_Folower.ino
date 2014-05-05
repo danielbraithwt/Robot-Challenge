@@ -128,9 +128,12 @@ void loop()
   Serial.print("[*] Right Speed: ");
   Serial.println(right);
   
-  Left(left);
-  Right(right);
-  //Forward(100);
+  if( error != 0 )
+  {
+    Left(left);
+    Right(right);
+  }
+  else Forward(100);
   
   delay(400);
 }
