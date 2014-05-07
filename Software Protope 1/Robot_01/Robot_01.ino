@@ -16,14 +16,15 @@ int numOfSensors = 8;
 int pins[] = { 13, 12, 11, 10, 9, 8, 7, 6, 5 };
 // Create array for output from sensors
 unsigned int output[8];
+unsigned int normOutput[8];
+unsigned int error;
+unsigned int quadrent = 1;
 
 // Create the sensor object
 QTRSensorsRC qtr((unsigned char[]) { 2, 4, 5, 6, 7 ,8 ,9, 10 }, numOfSensors);
 
 void setup()
-{
-  Serial.begin(9600);
-  
+{ 
   // initializ motor pins  
   pinMode(pwm_a, OUTPUT);  //Set control pins to be outputs
   pinMode(pwm_b, OUTPUT);
@@ -31,28 +32,43 @@ void setup()
   pinMode(dir_b, OUTPUT);
   analogWrite(pwm_a, 0);  // set motor voltages 0
   analogWrite(pwm_b, 0);
+  
   Serial.begin(9600);     // for communacations with computer
-  
-  //Serial.println("Starting in 3 seconds");
-  //delay(3000);
-  
 }
 
 void loop()
 {
-  // Get the position of the line
+  // Collect and process sensor data
+  readFromLineSensor();
+  calculateError();
+  
+  // Determin the what quadrent the robot is in
+  detectQuadrent();
+  
+  // Move robot based on what quadrent its in
+  if( quadrent == 1 ) moveQuadrent1();
+  else if( quadrent == 2 ) moveQuadrent2();
+  else if( quadrent == 3 ) moveQuadrent3();
+  else if( quadrent == 4 ) moveQuadrent4();
+}
+
+/**
+* Reads data from the QTR Line Sensor into the 
+* output arrays
+**/
+void readFromLineSensor()
+{
+  // Read the data values from the QTR Line Sensor
   qtr.read(output);
   
+  // TESTING: Print out sensor read values
   for( int i = 0; i < numOfSensors; i++ )
   {
    Serial.print(output[i]);
    Serial.print(" ");
    
   }
-  
   Serial.println();
-  
-  int normOutput[numOfSensors];
   
   // Normalise the output into 1 ( white ) and 0 ( black )
   for( int i = 0; i < numOfSensors; i++ )
@@ -61,15 +77,21 @@ void loop()
     else normOutput[i] = 1;
   }
   
+  // TESTING: Print out normalised values
   for( int i = 0; i < numOfSensors; i++ )
   {
    Serial.print(normOutput[i]);
    Serial.print(" ");
    
   }
-  
-  Serial.println();
-  
+}
+
+/**
+* Uses the read sensor values to calculate an error
+* value
+**/
+void calculateError()
+{
   // Sum up the sensor values 
   int average = 0;
   int count = 0;
@@ -84,16 +106,35 @@ void loop()
   average = average / count;
   
   // Calculate the error, ie the diffrence between the middle and the average
-  int error = 3500 - average;
-  
-  // Calculate the ammount to change direction by, devide by 100 because a
-  // change in the thousands is far to big
-  //int delta = abs(error/10);
-  int delta = KP * (error/100) + KD * ( (error/100) - lastError );
-  lastError = error/100 ;
+  error = 3500 - average;
   
   Serial.print("[*] Error: ");
   Serial.print(error);
+}
+
+/**
+* Determins what the quadrent the robot is in
+**/
+void detectQuadrent()
+{
+  // If one side of line sensor is reading just 1's
+  if( abs(error) == 3500 ) quadrent = 2;
+  
+  // Account for other quadrents here
+  
+  // Sends the current quadrent to the base station
+  sendQuadrent();
+}
+
+/**
+*
+**/
+void moveQuadrent1()
+{
+  int delta = KP * (error/100) + KD * ( (error/100) - lastError );
+  lastError = error/100 ;
+  
+  
   Serial.print(". ");
   Serial.print("[*] Delta: ");
   Serial.println(delta);
@@ -105,22 +146,6 @@ void loop()
   
   left += delta;
   right -= delta;
-  
-  //if( error > 0 )
-  //{
-  //  Serial.println("[*] Turning Right");
-    //right += delta;
-    //left -= delta;
-  //  Right(delta);
-  //}
-  // This means the line is to the left of the sensors
-  //else if( error < 0 )
-  //{
-  //  Serial.println("[*] Turning Left");
-    //right -= delta;
-    //left += delta;
-  //  Left(delta);
-  //}
   
   Serial.print("[*] Left Speed: ");
   Serial.print(left);
@@ -134,24 +159,43 @@ void loop()
     Right(right);
   }
   else Forward(100);
-  
-  delay(400);
 }
 
-//void detectQuadrent()
-//{
-  
-//}
-
+/**
+*
+**/
 void moveQuadrent2()
 {
- // Move foward
- // If can move left move left
+  
+}
 
- // If cant go foward
-    // Try right
-    // If no right
-       // turn around 
+/**
+*
+**/
+void moveQuadrent3()
+{
+  
+}
+
+/**
+*
+**/
+void moveQuadrent4()
+{
+  
+}
+
+///////////////////////
+// Utility Functions //
+///////////////////////
+
+/**
+ * Sends the location of the quadrent to the base station
+**/
+void sendQuadrent()
+{
+  Serial.print("Current Quadrent: ");
+  Serial.print(quadrent);
 }
 
 void Forward(int dt)
