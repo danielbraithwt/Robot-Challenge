@@ -6,9 +6,9 @@ int dir_a = 12;  //dir control for motor outputs 1 and 2 is on digital pin 12
 int dir_b = 13;  //dir control for motor outputs 3 and 4 is on digital pin 13
 int move_pulse = 100;
 
-int lastError = 0;
-float KP = 0.2;
-float KD = 1;
+float lastError = 0;
+float KP = 0.003;
+float KD = 0.001;
 
 // Number of sensors
 int numOfSensors = 8;
@@ -73,7 +73,7 @@ void readFromLineSensor()
   // Normalise the output into 1 ( white ) and 0 ( black )
   for( int i = 0; i < numOfSensors; i++ )
   {
-    if( output[i] > 2000 ) normOutput[i] = 0;
+    if( output[i] > 1500 ) normOutput[i] = 0;
     else normOutput[i] = 1;
   }
   
@@ -84,6 +84,8 @@ void readFromLineSensor()
    Serial.print(" ");
    
   }
+  
+  Serial.println();
 }
 
 /**
@@ -109,7 +111,7 @@ void calculateError()
   error = 3500 - average;
   
   Serial.print("[*] Error: ");
-  Serial.print(error);
+  Serial.println(error);
 }
 
 /**
@@ -131,7 +133,8 @@ void detectQuadrent()
 **/
 void moveQuadrent1()
 {
-  int delta = KP * (error/100) + KD * ( (error/100) - lastError );
+  //int delta = KP * (error/100) + KD * ( (error/100) - lastError );
+  int delta = KP*error + KD*(error - lastError);
   lastError = error/100 ;
   
   
@@ -147,18 +150,23 @@ void moveQuadrent1()
   left += delta;
   right -= delta;
   
-  Serial.print("[*] Left Speed: ");
-  Serial.print(left);
-  Serial.print(". ");
-  Serial.print("[*] Right Speed: ");
-  Serial.println(right);
+  //Serial.print("[*] Left Speed: ");
+  //Serial.print(left);
+  //Serial.print(". ");
+  //Serial.print("[*] Right Speed: ");
+  //Serial.println(right);
   
-  if( error != 0 )
-  {
-    Left(left);
-    Right(right);
-  }
-  else Forward(100);
+  if( error < 0 ) Left(delta);
+  else if( error > 0 ) Right(delta);
+  else Forward(20);
+  //if( error != 0 )
+  //{
+  //  Left(left);
+  //  Right(right);
+  //}
+  //else Forward(100);
+  
+  delay(500);
 }
 
 /**
@@ -200,48 +208,48 @@ void sendQuadrent()
 
 void Forward(int dt)
 {
-   digitalWrite(dir_a, LOW);   // select motor direction
-   digitalWrite(dir_b, LOW);   
-   analogWrite(pwm_a, 255);     // set motor voltage to max
-   analogWrite(pwm_b, 255);
+   digitalWrite(dir_a, HIGH);   // select motor direction
+   digitalWrite(dir_b, HIGH);   
+   analogWrite(pwm_a, move_pulse);     // set motor voltage to max
+   analogWrite(pwm_b, move_pulse);
    delay(dt);                   // wait
-   analogWrite(pwm_a, 0);       // set motor voltage to 0
-   analogWrite(pwm_b, 0);
+   //analogWrite(pwm_a, 0);       // set motor voltage to 0
+   //analogWrite(pwm_b, 0);
    Serial.println(" forward");
 }
 
 void Back(int dt)
 {
-  digitalWrite(dir_a, HIGH);   
-  digitalWrite(dir_b, HIGH);   
-  analogWrite(pwm_a, 255);
-  analogWrite(pwm_b, 255);
+  digitalWrite(dir_a, LOW);   
+  digitalWrite(dir_b, LOW);   
+  analogWrite(pwm_a, move_pulse);
+  analogWrite(pwm_b, move_pulse);
   delay(dt);
-  analogWrite(pwm_a, 0);
-  analogWrite(pwm_b, 0);
+  //analogWrite(pwm_a, 0);
+  //analogWrite(pwm_b, 0);
   Serial.println(" back");
 }
 
 void Left(int dt)
 {
-   digitalWrite(dir_a, LOW);   
-   digitalWrite(dir_b, HIGH);   
-   analogWrite(pwm_a, 255);
-   analogWrite(pwm_b, 255);
+   digitalWrite(dir_a, HIGH);   
+   digitalWrite(dir_b, LOW);   
+   analogWrite(pwm_a, move_pulse);
+   analogWrite(pwm_b, move_pulse);
    delay(dt);
-   analogWrite(pwm_a, 0);
-   analogWrite(pwm_b, 0);
+   //analogWrite(pwm_a, 0);
+   //analogWrite(pwm_b, 0);
    Serial.println(" left");
 }
 
 void Right(int dt)
 {
-   digitalWrite(dir_a, HIGH);   
-   digitalWrite(dir_b, LOW);   
-   analogWrite(pwm_a, 255);
-   analogWrite(pwm_b, 255);
+   digitalWrite(dir_a, LOW);   
+   digitalWrite(dir_b, HIGH);   
+   analogWrite(pwm_a, move_pulse);
+   analogWrite(pwm_b, move_pulse);
    delay(dt);
-   analogWrite(pwm_a, 0);
-   analogWrite(pwm_b, 0);
+   //analogWrite(pwm_a, 0);
+   //analogWrite(pwm_b, 0);
    Serial.println(" right");
 }
