@@ -9,13 +9,18 @@ int DIRECTION_MOTER1 = 12;
 int DIRECTION_MOTER2 = 13;
 
 // Default voltage constant
-int DEFAULT_VOLTAGE = 100;
+int DEFAULT_VOLTAGE = 35;
+
+int cyclePeriodMil = 20;
+
+int errorScale = (1/150);
 
 // Number of sensors in the QRT Sensor array
 int numberOfSensors = 8;
 
 // Create the QTR Sensor object
-QTRSensorsRC qtr((unsigned char[]) { 2, 4, 5, 6, 7 ,8 ,9, 10 }, numberOfSensors);
+//QTRSensorsRC qtr((unsigned char[]) { 2, 4, 5, 6, 7 ,8 ,9, 10 }, numberOfSensors);
+QTRSensorsRC qtr((unsigned char[]) { 10, 9, 8, 7, 6, 5, 4, 2 }, numberOfSensors);
 
 // Array to store the output from the QTR Sensor read
 unsigned int output[8];
@@ -25,6 +30,14 @@ int normalisedOutput[8];
 
 // Stores the current error
 int error = 0;
+
+int lastError = 0;
+
+//float KP = 0.9;
+//float KD = 2;
+
+float KP = 1.1;
+float KD = 2;
 
 // Stores the current quadrent the robot is in
 int quadrent = 1;
@@ -64,6 +77,8 @@ void loop()
   else if( quadrent == 3 ) moveQuadrent3();
   else if( quadrent == 4 ) moveQuadrent4();
   
+  delay(cyclePeriodMil);
+  //delay(500);
 }
 
 void readQTRSensor()
@@ -88,6 +103,8 @@ void readQTRSensor()
 
 void calculateError()
 {
+  lastError = error;
+  
   // Calculate the error, where the line is in relation to the sensors.
   // Weights the sensor readings from 0 to 7000, and sums them up, if
   // the sensor at that position is white then something is added to the
@@ -111,7 +128,11 @@ void calculateError()
   // an average of 3500 this means with the equason below you will get an error of 0
   // if the sensor is in the middle otherwise it will be negative if the robot needs to move left 
   // and it will be positive if the robot needs to move right
-  error = 3500 - average;
+  if( average == -1 ) error = lastError;
+  else error = 3500 - average;
+  
+  Serial.print("Average: ");
+  Serial.println(average);
   
   // TESTING: Will remvove these print statments later
   Serial.print("Error: ");
@@ -129,7 +150,9 @@ void moveQuadrent1()
 {
   // Figure out how much to adjust the voltages by
   // NOTE: There is probberly a better way to do this
-  int voltageAdjustment = error/100;
+  int voltageAdjustment = (KP*error + KD*(error - lastError))/100;//error*errorScale;
+  
+  //if( abs(voltageAdjustment) <= 6 ) voltageAdjustment = 0;
   
   // Add the adjustment to left because if we want it to turn left 
   // the left moter voltage should be less than the right moter voltage
@@ -158,6 +181,12 @@ void moveQuadrent4() {}
 
 void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
 {
+   if( newLeftVoltage < newRightVoltage ) Serial.println("LEFT");
+   else if( newLeftVoltage > newRightVoltage ) Serial.println("RIGHT"); 
+   
+   if( newLeftVoltage < 0 ) newLeftVoltage = 0;
+   if( newRightVoltage < 0 ) newRightVoltage = 0;
+   
   // Write the new voltages to the voltage pins
   analogWrite(VOLTAGE_MOTER1, newLeftVoltage);
   analogWrite(VOLTAGE_MOTER2, newRightVoltage);
