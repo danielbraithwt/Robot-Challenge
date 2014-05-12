@@ -143,7 +143,27 @@ void determinQuadrent()
 {
   // TESTING: At the moment it just does quadrent 1 but later we will determin how to 
   // tell between the diffrent quadrents
-  quadrent = 1;
+  //quadrent = 1;
+  
+  // Check for quadrent 2
+  int rightCount = 0;
+  int leftCount = 0;
+  
+  // Count from the left
+  for( int i = 0; i < numberOfSensors; i++ )
+  {
+    if( normalisedOutput[i] == 1 ) leftCount++;
+    else break;
+  }
+  
+  // Count from the right
+  for( int i = numberOfSensors-1; i >= 0; i-- )
+  {
+    if( normalisedOutput[i] == 1 ) rightCount++;
+    else break;  
+  }
+  
+  if( leftCount >= 4 || rightCount >= 4 ) quadrent = 2;
 }
 
 void moveQuadrent1()
@@ -175,7 +195,13 @@ void moveQuadrent1()
   setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
 }
 
-void moveQuadrent2() {}
+void moveQuadrent2() 
+{
+  // Priority: Left, Foward, Right, Turn aroud (180)
+  
+  setMoterVoltages(0,0);
+}
+
 void moveQuadrent3() {}
 void moveQuadrent4() {}
 
