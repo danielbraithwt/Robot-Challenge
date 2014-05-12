@@ -163,7 +163,14 @@ void determinQuadrent()
     else break;  
   }
   
-  if( leftCount >= 4 || rightCount >= 4 ) quadrent = 2;
+  if( leftCount >= 4 || rightCount >= 4 ) 
+  {
+    quadrent = 2;
+    setMoterVoltages(0,0);
+    delay(2000);
+  }
+  
+  // Detect quadrent 3
 }
 
 void moveQuadrent1()
@@ -199,11 +206,25 @@ void moveQuadrent2()
 {
   // Priority: Left, Foward, Right, Turn aroud (180)
   
-  setMoterVoltages(0,0);
+  //setMoterVoltages(0,0);
+  
+  if( canMoveLeft() ) turnLeft();
+  else if( canMoveFoward() ) moveQuadrent1();
+  else if( canMoveRight() ) turnRight();
+  else turnAround();
+  
 }
 
 void moveQuadrent3() {}
 void moveQuadrent4() {}
+
+boolean canMoveFoward() {}
+boolean canMoveLeft() {}
+boolean canMoveRight() {}
+
+void turnLeft() {}
+void turnRight() {}
+void turnAround() {}
 
 void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
 {
