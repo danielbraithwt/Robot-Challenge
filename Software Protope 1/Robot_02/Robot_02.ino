@@ -13,7 +13,7 @@ int DEFAULT_VOLTAGE = 35;
 
 int cyclePeriodMil = 20;
 
-int errorScale = (1/150);
+int rotationPeriodMil = 150;
 
 // Number of sensors in the QRT Sensor array
 int numberOfSensors = 8;
@@ -149,25 +149,16 @@ void determinQuadrent()
   int rightCount = 0;
   int leftCount = 0;
   
-  // Count from the left
-  for( int i = 0; i < numberOfSensors; i++ )
-  {
-    if( normalisedOutput[i] == 1 ) leftCount++;
-    else break;
-  }
+
   
-  // Count from the right
-  for( int i = numberOfSensors-1; i >= 0; i-- )
-  {
-    if( normalisedOutput[i] == 1 ) rightCount++;
-    else break;  
-  }
-  
-  if( leftCount >= 4 || rightCount >= 4 ) 
+  if( quadrent == 1 && (canMoveRight() || canMoveLeft())) 
   {
     quadrent = 2;
-    setMoterVoltages(0,0);
-    delay(2000);
+    //setMoterVoltages(0,0);
+    
+    DEFAULT_VOLTAGE = 60;
+    
+    //delay(2000);
   }
   
   // Detect quadrent 3
@@ -209,7 +200,7 @@ void moveQuadrent2()
   //setMoterVoltages(0,0);
   
   if( canMoveLeft() ) turnLeft();
-  else if( canMoveFoward() ) moveQuadrent1();
+  else if( canMoveFoward() ) moveStraight();
   else if( canMoveRight() ) turnRight();
   else turnAround();
   
@@ -218,18 +209,152 @@ void moveQuadrent2()
 void moveQuadrent3() {}
 void moveQuadrent4() {}
 
-boolean canMoveFoward() {}
-boolean canMoveLeft() {}
-boolean canMoveRight() {}
+boolean canMoveFoward() 
+{
+  for( int i = 0; i < numberOfSensors; i++ )
+  {
+    if( normalisedOutput[i] == 1 ) return true;
+  }
+  
+  return false;
 
-void turnLeft() {}
-void turnRight() {}
-void turnAround() {}
+}
+
+boolean canMoveLeft() 
+{
+  int leftCount = 0;
+  
+  // Count from the left
+  for( int i = 0; i < numberOfSensors; i++ )
+  {
+    if( normalisedOutput[i] == 1 ) leftCount++;
+    else break;
+  }
+  
+  if( leftCount >= 4 ) return true;
+  return false;
+}
+
+boolean canMoveRight() 
+{
+  int rightCount = 0;
+  
+  // Count from the right
+  for( int i = numberOfSensors-1; i >= 0; i-- )
+  {
+    if( normalisedOutput[i] == 1 ) rightCount++;
+    else break;  
+  }
+  
+  if( rightCount >= 4 ) return true;
+  return false;
+
+}
+
+boolean isCenteredOnLine()
+{
+  int count = 0;
+  
+  for( int i = 1; i < numberOfSensors-1; i++ )
+  {
+    if(normalisedOutput[i] == 1) count++;
+    else if(count == 1) return false;
+    
+    if(count == 2) return true;
+  }
+  
+  return false;
+  
+  //readQTRSensor();
+  //calculateError();
+  
+  //return ( error == 0 );
+}
+
+void turnLeft() 
+{
+  preRotationMove();
+  
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, LOW);
+  
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+  delay(rotationPeriodMil);
+  
+  while(!isCenteredOnLine())
+  {
+    //delay(rotationPeriodMil);
+  }
+  
+  setMoterVoltages(0, 0);
+  
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
+}
+
+void turnRight() 
+{
+  preRotationMove();
+  
+  digitalWrite(DIRECTION_MOTER1, LOW);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
+  
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+  delay(rotationPeriodMil);
+  
+  while(!isCenteredOnLine())
+  {
+    //delay(rotationPeriodMil);
+  }
+  
+  setMoterVoltages(0, 0);
+  
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
+}
+
+void turnAround() 
+{
+  digitalWrite(DIRECTION_MOTER1, LOW);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
+  
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+  delay(rotationPeriodMil);
+  
+  while(!isCenteredOnLine())
+  {
+    delay(rotationPeriodMil);
+  }
+  
+  setMoterVoltages(0, 0);
+  
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
+}
+
+void moveStraight()
+{
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+}
+
+void preRotationMove()
+{
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+  
+  //while(error != 0) 
+  //{
+  //  readQTRSensor();
+  //  calculateError();
+  //  delay(300);
+  //}
+  delay(150);
+  //setMoterVoltages(0, 0);
+}
 
 void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
 {
-   if( newLeftVoltage < newRightVoltage ) Serial.println("LEFT");
-   else if( newLeftVoltage > newRightVoltage ) Serial.println("RIGHT"); 
+   //if( newLeftVoltage < newRightVoltage ) Serial.println("LEFT");
+   //else if( newLeftVoltage > newRightVoltage ) Serial.println("RIGHT"); 
    
    if( newLeftVoltage < 0 ) newLeftVoltage = 0;
    if( newRightVoltage < 0 ) newRightVoltage = 0;
