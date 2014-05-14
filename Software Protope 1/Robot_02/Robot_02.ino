@@ -13,7 +13,8 @@ int DEFAULT_VOLTAGE = 35;
 
 int cyclePeriodMil = 20;
 
-int rotationPeriodMil = 150;
+int rotationPeriodMil = 200;
+int preRotationPeriodMil = 500;
 
 // Number of sensors in the QRT Sensor array
 int numberOfSensors = 8;
@@ -115,10 +116,22 @@ void calculateError()
   int sum = 0;
   int count = 0;
   
-  for( int i = 0; i < numberOfSensors; i++ )
+  if( quadrent >= 2 )
   {
-    sum += i * ( 1000 * normalisedOutput[i] );
-    count += normalisedOutput[i];
+    for( int i = 2; i < numberOfSensors-2; i++ )
+    {
+      sum += i * ( 1000 * normalisedOutput[i] );
+      count += normalisedOutput[i];
+    }
+    
+  }
+  else
+  {
+    for( int i = 0; i < numberOfSensors; i++ )
+    {
+      sum += i * ( 1000 * normalisedOutput[i] );
+      count += normalisedOutput[i];
+    }
   }
   
   // Calulate the average position of the line
@@ -144,21 +157,16 @@ void determinQuadrent()
   // TESTING: At the moment it just does quadrent 1 but later we will determin how to 
   // tell between the diffrent quadrents
   //quadrent = 1;
-  
-  // Check for quadrent 2
-  int rightCount = 0;
-  int leftCount = 0;
-  
 
   
-  if( quadrent == 1 && (canMoveRight() || canMoveLeft())) 
+  if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
   {
     quadrent = 2;
-    //setMoterVoltages(0,0);
+    setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 60;
+    //DEFAULT_VOLTAGE = 60;
     
-    //delay(2000);
+    delay(2000);
   }
   
   // Detect quadrent 3
@@ -200,7 +208,7 @@ void moveQuadrent2()
   //setMoterVoltages(0,0);
   
   if( canMoveLeft() ) turnLeft();
-  else if( canMoveFoward() ) moveStraight();
+  else if( canMoveFoward() ) moveQuadrent1();//moveStraight();
   else if( canMoveRight() ) turnRight();
   else turnAround();
   
@@ -253,14 +261,21 @@ boolean canMoveRight()
 
 boolean isCenteredOnLine()
 {
+  readQTRSensor();
+  
   int count = 0;
   
-  for( int i = 1; i < numberOfSensors-1; i++ )
+  for( int i = 2; i < numberOfSensors-2; i++ )
   {
     if(normalisedOutput[i] == 1) count++;
     else if(count == 1) return false;
     
-    if(count == 2) return true;
+    if(count == 2) 
+    {
+      Serial.println("Is centered on line");
+      //delay(2000);
+      return true;
+    }
   }
   
   return false;
@@ -279,7 +294,7 @@ void turnLeft()
   digitalWrite(DIRECTION_MOTER2, LOW);
   
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-  delay(rotationPeriodMil);
+  delay(preRotationPeriodMil);
   
   while(!isCenteredOnLine())
   {
@@ -300,7 +315,7 @@ void turnRight()
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-  delay(rotationPeriodMil);
+  delay(preRotationPeriodMil);
   
   while(!isCenteredOnLine())
   {
@@ -319,11 +334,11 @@ void turnAround()
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-  delay(rotationPeriodMil);
+  delay(preRotationPeriodMil);
   
   while(!isCenteredOnLine())
   {
-    delay(rotationPeriodMil);
+    //delay(rotationPeriodMil);
   }
   
   setMoterVoltages(0, 0);
@@ -347,7 +362,7 @@ void preRotationMove()
   //  calculateError();
   //  delay(300);
   //}
-  delay(150);
+  delay(200);
   //setMoterVoltages(0, 0);
 }
 
