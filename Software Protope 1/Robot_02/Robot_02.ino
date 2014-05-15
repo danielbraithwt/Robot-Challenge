@@ -1,5 +1,8 @@
 #include <QTRSensors.h>
 
+// Analog pin for the short range ir sensor
+int FRONT_IR_SENSOR_PIN = 0;
+
 // Pins that control the voltage to the moters
 int VOLTAGE_MOTER1 = 3;
 int VOLTAGE_MOTER2 = 11;
@@ -9,7 +12,7 @@ int DIRECTION_MOTER1 = 12;
 int DIRECTION_MOTER2 = 13;
 
 // Default voltage constant
-int DEFAULT_VOLTAGE = 35;
+int DEFAULT_VOLTAGE = 40;
 
 int cyclePeriodMil = 20;
 
@@ -32,13 +35,30 @@ int normalisedOutput[8];
 // Stores the current error
 int error = 0;
 
+//
 int lastError = 0;
+
+// Stores IR read values
+int frontIRReading = 0;
+int frontIRNormalised = 0;
 
 //float KP = 0.9;
 //float KD = 2;
 
-float KP = 1.1;
-float KD = 2;
+float largeErrorKP = 1.1;
+float largeErrorKD = 2;
+
+float smallErrorKP = 0.7;
+float smallErrorKD = 1;
+
+//float KP = 0.9;
+//float KD = 2;
+
+//float KP = 0.5;
+//float KD = 1.1;
+
+//float KP = 1.5;
+//float KD = 2.3;
 
 // Stores the current quadrent the robot is in
 int quadrent = 1;
@@ -63,8 +83,11 @@ void setup()
 
 void loop()
 {
-  // Read from the sensor
+  // Read from the line sensor
   readQTRSensor();
+  
+  // Read from the front IR sensor
+  readFrontIRSensor();
   
   // Calcualte the error of the robot
   calculateError();
@@ -102,6 +125,17 @@ void readQTRSensor()
   Serial.println();
 }
 
+void readFrontIRSensor()
+{
+  frontIRReading = analogRead(FRONT_IR_SENSOR_PIN);
+  
+  if( frontIRReading > 200 ) frontIRNormalised = 0;
+  else frontIRNormalised = 1;
+  
+  Serial.print("Front Sensor Reading: ");
+  Serial.println(frontIRReading);
+}
+
 void calculateError()
 {
   lastError = error;
@@ -113,6 +147,7 @@ void calculateError()
   // of sensors with white under them, giving an average of ezactly 3500 if the sensors 
   // in the middle are the ones over the line, otherwise it will be smaller
   // towards the left and greater toward the right
+  
   int sum = 0;
   int count = 0;
   
@@ -158,7 +193,7 @@ void determinQuadrent()
   // tell between the diffrent quadrents
   //quadrent = 1;
 
-  
+  // Detect quadrent 2
   if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
   {
     quadrent = 2;
@@ -170,13 +205,28 @@ void determinQuadrent()
   }
   
   // Detect quadrent 3
+  if( quadrent == 2 && frontIRNormalised == 1 )
+  {
+    quadrent = 3;
+    setMoterVoltages(0,0);
+    
+    //DEFAULT_VOLTAGE = 60;
+    
+    delay(2000);
+  }
 }
 
 void moveQuadrent1()
 {
   // Figure out how much to adjust the voltages by
   // NOTE: There is probberly a better way to do this
-  int voltageAdjustment = (KP*error + KD*(error - lastError))/100;//error*errorScale;
+  //int voltageAdjustment = ((KP)*error + KD*(error - lastError))/100;//error*errorScale;
+
+
+
+  int voltageAdjustment = 0;
+  if( abs(error) >= 1500 ) voltageAdjustment = ((largeErrorKP)*error + largeErrorKD*(error - lastError))/100;//error*errorScale;
+  else voltageAdjustment = ((smallErrorKP)*error + smallErrorKD*(error - lastError))/100;//error*errorScale;
   
   //if( abs(voltageAdjustment) <= 6 ) voltageAdjustment = 0;
   
@@ -214,7 +264,12 @@ void moveQuadrent2()
   
 }
 
-void moveQuadrent3() {}
+void moveQuadrent3() 
+{
+  if( frontIRNormalised == 1 ) turnAround();
+  else moveQuadrent2();
+  
+}
 void moveQuadrent4() {}
 
 boolean canMoveFoward() 
