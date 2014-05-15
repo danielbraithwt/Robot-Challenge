@@ -46,10 +46,13 @@ int frontIRNormalised = 0;
 //float KD = 2;
 
 float largeErrorKP = 1.1;
-float largeErrorKD = 2;
+float largeErrorKD = 0.8;
 
-float smallErrorKP = 0.7;
-float smallErrorKD = 1;
+float smallErrorKP = 0.5;
+float smallErrorKD = 0.9;
+
+//float KP = 1.1;
+//float KD = 0.95;
 
 //float KP = 0.9;
 //float KD = 2;
@@ -222,10 +225,13 @@ void moveQuadrent1()
   // NOTE: There is probberly a better way to do this
   //int voltageAdjustment = ((KP)*error + KD*(error - lastError))/100;//error*errorScale;
 
-
-
   int voltageAdjustment = 0;
-  if( abs(error) >= 1500 ) voltageAdjustment = ((largeErrorKP)*error + largeErrorKD*(error - lastError))/100;//error*errorScale;
+  
+  if( abs(error) >= 1500 ) 
+  {
+    DEFAULT_VOLTAGE = 35;
+    voltageAdjustment = ((largeErrorKP)*error + largeErrorKD*(error - lastError))/100;//error*errorScale;
+  }
   else voltageAdjustment = ((smallErrorKP)*error + smallErrorKD*(error - lastError))/100;//error*errorScale;
   
   //if( abs(voltageAdjustment) <= 6 ) voltageAdjustment = 0;
@@ -249,6 +255,8 @@ void moveQuadrent1()
   
   // Update the moter voltage pins
   setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
+  
+  DEFAULT_VOLTAGE = 40;
 }
 
 void moveQuadrent2() 
@@ -270,7 +278,10 @@ void moveQuadrent3()
   else moveQuadrent2();
   
 }
-void moveQuadrent4() {}
+void moveQuadrent4() 
+{
+
+}
 
 boolean canMoveFoward() 
 {
