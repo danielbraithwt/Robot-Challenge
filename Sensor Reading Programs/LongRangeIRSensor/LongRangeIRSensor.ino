@@ -15,7 +15,7 @@ void loop()
 {
   // Get the reading and convert to a distance
   int reading = analogRead(SENSOR_IN);
-  double distance = 0;
+  double distance = -1;
   if( reading >= 80 && reading <=530 ) 
   {
     distance= 2076.0/(reading - 11);

@@ -18,7 +18,7 @@ int DIRECTION_MOTER1 = 12;
 int DIRECTION_MOTER2 = 13;
 
 // Default voltage constant
-int DEFAULT_VOLTAGE = 37;
+int DEFAULT_VOLTAGE = 34;
 
 int cyclePeriodMil = 20;
 
@@ -38,12 +38,6 @@ unsigned int output[8];
 // Array to stored the normalised output from the QTR Sensor read
 int normalisedOutput[8];
 
-// Stores the current error
-int error = 0;
-
-//
-int lastError = 0;
-
 // Stores IR read values
 int frontIRReading = 0;
 int frontIRNormalised = 0;
@@ -54,45 +48,18 @@ double leftIRReading = 0;
 // Right IR sensor values
 double rightIRReading = 0;
 
-// Contains the intergril
-//int I = 0;
+// Stores the current error
+int error = 0;
 
-//float KP = 1.2;
-//float KD = 0.8;
+int lastError = 0;
 
-//float KP = 0.5;
-//float KD = 1.1;
-
-//float KP = 0.4;
+//float KP = 0.9;
 //float KD = 2;
-
-//float largeErrorKP = 1;
-//float largeErrorKD = 1;
-
-//float smallErrorKP = 0.9;
-//float smallErrorKD = 0.7;
-
-//float largeErrorKP = 1.6;
-//float largeErrorKD = 0.5;
-
-//float smallErrorKP = 0.5;
-//float smallErrorKD = 0.9;
-
-//float KP = 1.1;
-//float KD = 0.95;
-
-//float KI = 0;
-//float KP = 0.3;
-//float KD = 1;
-
-//float KP = 0.5;
-//float KD = 1.1;
-
-//float KP = 1.5;
-//float KD = 2.3;
 
 float KP = 1.1;
 float KD = 2;
+
+
 
 // Stores the current quadrent the robot is in
 int quadrent = 1;
@@ -117,17 +84,20 @@ void setup()
 
 void loop()
 {
-  // Read from the line sensor
+  // Read from the sensor
   readQTRSensor();
   
   // Read from the front IR sensor
-  readFrontIRSensor();
+  if( quadrent >= 2 ) readFrontIRSensor();
   
-  // Read from the left IR sensor
-  readLeftIRSensor();
+  if( quadrent >= 3 )
+  {
+    // Read from the left IR sensor
+    readLeftIRSensor();
   
-  // Read from the right IR sensor
-  readRightIRSensor();
+    // Read from the right IR sensor
+    readRightIRSensor();
+  }
   
   // Calcualte the error of the robot
   calculateError();
@@ -217,7 +187,6 @@ void calculateError()
   // of sensors with white under them, giving an average of ezactly 3500 if the sensors 
   // in the middle are the ones over the line, otherwise it will be smaller
   // towards the left and greater toward the right
-  
   int sum = 0;
   int count = 0;
   
@@ -255,9 +224,6 @@ void calculateError()
   // TESTING: Will remvove these print statments later
   Serial.print("Error: ");
   Serial.println(error);
-  
-  // Add the error to the intergril
-  //I += error;
 }
 
 void determinQuadrent()
@@ -266,13 +232,13 @@ void determinQuadrent()
   // tell between the diffrent quadrents
   //quadrent = 1;
 
-  // Detect quadrent 2
+  
   if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
   {
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    //DEFAULT_VOLTAGE = 40;
+    DEFAULT_VOLTAGE = 36;
     
     delay(2000);
   }
@@ -301,7 +267,9 @@ void moveQuadrent1()
 {
   // Figure out how much to adjust the voltages by
   // NOTE: There is probberly a better way to do this
-  int voltageAdjustment = ((KP) * error + KD * (error - lastError))/100;//error*errorScale;
+  int voltageAdjustment = (KP*error + KD*(error - lastError))/100;//error*errorScale;
+  
+  //if( abs(voltageAdjustment) <= 6 ) voltageAdjustment = 0;
   
   // Add the adjustment to left because if we want it to turn left 
   // the left moter voltage should be less than the right moter voltage
@@ -311,30 +279,17 @@ void moveQuadrent1()
   // Substract the adjustment from the right moter voltage
   int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
-  //if( voltageAdjustment < 0 ) 
-  //{
-  //  leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
-  //  rightMoterVoltage = DEFAULT_VOLTAGE;
-  //}
-  //else if( voltageAdjustment > 0 )
-  //{
-  //  rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
-  //  leftMoterVoltage = DEFAULT_VOLTAGE;
-  //}
-  
   // TESTING: Will remvove these print statments later
-  //Serial.print("Voltage Adjustment: ");
-  //Serial.println(voltageAdjustment);
+  Serial.print("Voltage Adjustment: ");
+  Serial.println(voltageAdjustment);
   
-  //Serial.print("Left Moter: ");
-  //Serial.print(leftMoterVoltage);
-  //Serial.print(". Right Moter: ");
-  //Serial.println(rightMoterVoltage);
+  Serial.print("Left Moter: ");
+  Serial.print(leftMoterVoltage);
+  Serial.print(". Right Moter: ");
+  Serial.println(rightMoterVoltage);
   
   // Update the moter voltage pins
   setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
-  
-  //DEFAULT_VOLTAGE = 40;
 }
 
 void moveQuadrent2() 
@@ -354,7 +309,7 @@ void moveQuadrent3()
 {
   if( frontIRNormalised == 1 ) turnAround();
   else moveQuadrent2();
-  
+
 }
 void moveQuadrent4() 
 {
@@ -381,7 +336,7 @@ void moveQuadrent4()
     // Update the moter voltage pins
     //setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
-  
+
 }
 
 boolean canMoveFoward() 
@@ -432,7 +387,7 @@ boolean isCenteredOnLine()
   
   int count = 0;
   
-  for( int i = 2; i < numberOfSensors-1; i++ )
+  for( int i = 2; i < numberOfSensors-2; i++ )
   {
     if(normalisedOutput[i] == 1) count++;
     else if(count == 1) return false;
@@ -542,6 +497,7 @@ void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
    if( newRightVoltage < 0 ) newRightVoltage = 0;
    
   // Write the new voltages to the voltage pins
-  analogWrite(VOLTAGE_MOTER1, abs(newLeftVoltage));
-  analogWrite(VOLTAGE_MOTER2, abs(newRightVoltage));
+  analogWrite(VOLTAGE_MOTER1, newLeftVoltage);
+  analogWrite(VOLTAGE_MOTER2, newRightVoltage);
 }
+
