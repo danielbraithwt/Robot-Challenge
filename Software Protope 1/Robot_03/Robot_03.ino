@@ -318,7 +318,8 @@ void moveQuadrent4()
   
   if( frontIRNormalised == 1 )
   {
-    if( rightIRReading == 0 ) turnRight();
+    if ( rightIRReading == 0 && leftIRReading == 0 ) turnAround();
+    else if( rightIRReading == 0 ) turnRight();
     else if( leftIRReading == 0 ) turnLeft();
   }
   else
@@ -334,7 +335,7 @@ void moveQuadrent4()
     int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
     // Update the moter voltage pins
-    //setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
+    setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
 
 }
@@ -418,9 +419,17 @@ void turnLeft()
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
   delay(preRotationPeriodMil);
   
-  while(!isCenteredOnLine())
+  if( quadrent == 2 || quadrent == 3 )
   {
-    //delay(rotationPeriodMil);
+    while(!isCenteredOnLine())
+    {
+      //delay(rotationPeriodMil);
+    }
+  }
+  else
+  {
+    while( leftIRReading != 0 );
+    
   }
   
   setMoterVoltages(0, 0);
@@ -439,9 +448,17 @@ void turnRight()
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
   delay(preRotationPeriodMil);
   
-  while(!isCenteredOnLine())
+  if( quadrent == 2 || quadrent == 3 )
   {
-    //delay(rotationPeriodMil);
+    while(!isCenteredOnLine())
+    {
+      //delay(rotationPeriodMil);
+    }
+  }
+  else 
+  {
+    while( rightIRReading != 0 );
+    
   }
   
   setMoterVoltages(0, 0);
@@ -455,12 +472,35 @@ void turnAround()
   digitalWrite(DIRECTION_MOTER1, LOW);
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-  delay(preRotationPeriodMil);
-  
-  while(!isCenteredOnLine())
+  if( quadrent == 2 || quadrent == 3 )
   {
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+    delay(preRotationPeriodMil);
+    
+    while(!isCenteredOnLine())
+    {
     //delay(rotationPeriodMil);
+    }
+  }
+  else
+  {
+    double preRotationLeft = leftIRReading;
+    double preRotationRight = rightIRReading;
+    
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+    delay(preRotationPeriodMil);
+    
+    readLeftIRSensor();
+    readRightIRSensor();
+    
+    // Sinse we are turning around we want to turn untill the origonal left value is
+    // close to the new right value and visa versa
+    while(abs(preRotationLeft - rightIRReading) > 0.5 && abs(preRotationRight - leftIRReading) > 0.5)
+    {
+      readLeftIRSensor();
+      readRightIRSensor();
+    }
+    
   }
   
   setMoterVoltages(0, 0);
@@ -476,16 +516,12 @@ void moveStraight()
 
 void preRotationMove()
 {
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-  
-  //while(error != 0) 
-  //{
-  //  readQTRSensor();
-  //  calculateError();
-  //  delay(300);
-  //}
-  delay(200);
-  //setMoterVoltages(0, 0);
+  // If we are in quadrent 4 we dont need to move 
+  if( quadrent != 4 )
+  {
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+    delay(200);
+  }
 }
 
 void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
