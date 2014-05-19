@@ -10,15 +10,15 @@ int LEFT_IR_SENSOR_PIN = 1;
 int RIGHT_IR_SENSOR_PIN = 2;
 
 // Pins that control the voltage to the moters
-int VOLTAGE_MOTER1 = 3;
-int VOLTAGE_MOTER2 = 11;
+int VOLTAGE_MOTER1 = 11;
+int VOLTAGE_MOTER2 = 3;
 
 // Pins that controll the direction of the moters
-int DIRECTION_MOTER1 = 12;
-int DIRECTION_MOTER2 = 13;
+int DIRECTION_MOTER1 = 13;
+int DIRECTION_MOTER2 = 12;
 
 // Default voltage constant
-int DEFAULT_VOLTAGE = 34;
+int DEFAULT_VOLTAGE = 50;
 
 int cyclePeriodMil = 20;
 
@@ -61,8 +61,10 @@ double lastDiffrence = 0;
 //float KP = 0.9;
 //float KD = 2;
 
-float KP = 1.1;
-float KD = 2;
+//float KP = 1.1;
+//float KD = 2;
+float KP = 0.5;
+float KD = 1.7;
 
 
 
@@ -85,6 +87,8 @@ void setup()
   // Set both moters to foward
   digitalWrite(DIRECTION_MOTER1, HIGH);
   digitalWrite(DIRECTION_MOTER2, HIGH);
+  
+  delay(2000);
 }
 
 void loop()
@@ -141,11 +145,11 @@ void readQTRSensor()
     else normalisedOutput[i] = 1;
     
     // TESTING: Print this out to see what is happerning
-    //Serial.print(normalisedOutput[i]);
-    //Serial.print(" ");
+    Serial.print(normalisedOutput[i]);
+    Serial.print(" ");
   }
   
-  //Serial.println();
+  Serial.println();
 }
 
 /*
@@ -260,11 +264,11 @@ void calculateError()
   else error = 3500 - average;
   
   // TESTING: Will remvove these print statments later
-  //Serial.print("Average: ");
-  //Serial.println(average);
+  Serial.print("Average: ");
+  Serial.println(average);
   
-  //Serial.print("Error: ");
-  //Serial.println(error);
+  Serial.print("Error: ");
+  Serial.println(error);
 }
 
 /*
@@ -281,7 +285,7 @@ void determinQuadrent()
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 45;
+    //DEFAULT_VOLTAGE = 45;
     
     delay(2000);
     
@@ -356,13 +360,13 @@ void moveQuadrent1()
   int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
   // TESTING: Will remvove these print statments later
-  //Serial.print("Voltage Adjustment: ");
-  //Serial.println(voltageAdjustment);
+  Serial.print("Voltage Adjustment: ");
+  Serial.println(voltageAdjustment);
   
-  //Serial.print("Left Moter: ");
-  //Serial.print(leftMoterVoltage);
-  //Serial.print(". Right Moter: ");
-  //Serial.println(rightMoterVoltage);
+  Serial.print("Left Moter: ");
+  Serial.print(leftMoterVoltage);
+  Serial.print(". Right Moter: ");
+  Serial.println(rightMoterVoltage);
   
   // Update the moter voltage pins
   setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
