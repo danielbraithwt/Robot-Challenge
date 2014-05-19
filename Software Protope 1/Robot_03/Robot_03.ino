@@ -51,6 +51,8 @@ double rightIRReading = 0;
 // Stores the current error
 int error = 0;
 
+// Stores the last calculated error, used when calculating moter speed
+// adjustment
 int lastError = 0;
 
 //float KP = 0.9;
@@ -84,13 +86,16 @@ void setup()
 
 void loop()
 {
-  // Read from the sensor
-  readQTRSensor();
+  // Read from the sensor, unless we are in quadrent 4 because
+  // we dont need to worry about it
+  if( quadrent < 4 ) readQTRSensor();
   
-  // Read from the front IR sensor
+  // Read from the front IR sensor if we are in any quadrent but the first
   if( quadrent >= 2 ) readFrontIRSensor();
   
-  if( quadrent >= 3 )
+  // If we are in the 4th quadrent read from the IR sensors
+  // on the side of the robot
+  if( quadrent == 4 )
   {
     // Read from the left IR sensor
     readLeftIRSensor();
@@ -112,9 +117,14 @@ void loop()
   else if( quadrent == 4 ) moveQuadrent4();
   
   delay(cyclePeriodMil);
-  //delay(500);
 }
 
+/*
+ * Reads from the QTR Sensor Array and puts values into the array
+ * output, then for each value in output the corrosponding value in the
+ * normalisedOutput array will be set to 0 if that reading is over 1000
+ * ie black and if the value is < 1000 it will be set to 1
+ */
 void readQTRSensor()
 {
   // Read from the sensor into the array
@@ -128,68 +138,99 @@ void readQTRSensor()
     else normalisedOutput[i] = 1;
     
     // TESTING: Print this out to see what is happerning
-    Serial.print(normalisedOutput[i]);
-    Serial.print(" ");
+    //Serial.print(normalisedOutput[i]);
+    //Serial.print(" ");
   }
   
-  Serial.println();
+  //Serial.println();
 }
 
+/*
+ * Reads from the front digital short range IR sensor, it then assigns frontIRReading
+ * 0 if there is nothing in the way and it assigns 1 if there is a wall in the way
+ */
 void readFrontIRSensor()
 {
+  // Read the digital sensor as analog, will give a value between 0 and
+  // 1024
   frontIRReading = analogRead(FRONT_IR_SENSOR_PIN);
   
+  // Normalise the reading to 0 ( no wall ), 1 ( wall )
   if( frontIRReading > 200 ) frontIRNormalised = 0;
-  else frontIRNormalised = 1;
-  
-  Serial.print("Front Sensor Reading: ");
-  Serial.println(frontIRReading);
 }
 
+/*
+ * Retreves the reading for the long range IR sensor on the left
+ * of the robot
+ */
 void readLeftIRSensor()
 {
   leftIRReading = readLongRangeIRSensor(LEFT_IR_SENSOR_PIN);
 }
 
+/*
+ * Retreves the reading for the long range IR sensor on the right
+ * of the robot
+ */
 void readRightIRSensor()
 {
   rightIRReading = readLongRangeIRSensor(RIGHT_IR_SENSOR_PIN);
-  
 }
 
+/*
+ * Return the value read from the long range IR sensor at
+ * the analog pin passed to it. Will return 0 if read value is
+ * outside the allowed range
+ */
 double readLongRangeIRSensor( int pin )
 {
-  // Get the reading and convert to a distance
+  // Get the reading from the analog pin
   int reading = analogRead(pin);
+  
+  // Use the formula on there website to calculate
+  // the distance, if its outside the valid range of sensor values
+  // just leave the distance as 0 because otherwise we will get incorrect distances
   double distance = 0;
   if( reading >= 80 && reading <=530 ) 
   {
     distance= 2076.0/(reading - 11);
   }
   
+  // TESTING: Will remove these print statments for final revision
   Serial.print("Distance: ");
   Serial.print(distance);
   Serial.print(". Reading: ");
   Serial.println(reading);
   
-  return reading;
+  // TESTING: Return 0 while sensors arnt connected
+  return 0;  
+  //return reading;
   
 }
 
+/*
+ * Calculate the error, where the line is in relation to the sensors.
+ * Weights the sensor readings from 0 to 7000, and sums them up, if
+ * the sensor at that position is white then weight of that sensor is added to the
+ * sum otherwise it remains the same, at the end the sum is devied by number
+ * of sensors with white under them, giving an average of ezactly 3500 if the sensors 
+ * in the middle are the ones over the line, otherwise it will be smaller
+ * towards the left and greater toward the right
+ 
+ * This will give an error of 0 if the middle sensors are over the line other wise
+ * negative if robot needs to turn left and positive if robot needs to turn right
+ */
 void calculateError()
 {
   lastError = error;
   
-  // Calculate the error, where the line is in relation to the sensors.
-  // Weights the sensor readings from 0 to 7000, and sums them up, if
-  // the sensor at that position is white then something is added to the
-  // sum otherwise it remains the same, at the end the sum is devied by number
-  // of sensors with white under them, giving an average of ezactly 3500 if the sensors 
-  // in the middle are the ones over the line, otherwise it will be smaller
-  // towards the left and greater toward the right
+  
   int sum = 0;
   int count = 0;
   
+  // If we are in quadrent 2 or 3 we want to ignore the outside sensors
+  // because it will make our robot vear off course when we pass a right turn and we
+  // ignore it
   if( quadrent >= 2 )
   {
     for( int i = 2; i < numberOfSensors-2; i++ )
@@ -211,39 +252,41 @@ void calculateError()
   // Calulate the average position of the line
   int average = sum/count;
   
-  // Calculate the error, sinse if the line is in the middle of the sensors you get
-  // an average of 3500 this means with the equason below you will get an error of 0
-  // if the sensor is in the middle otherwise it will be negative if the robot needs to move left 
-  // and it will be positive if the robot needs to move right
+  // Calculate the error based on the average
   if( average == -1 ) error = lastError;
   else error = 3500 - average;
   
-  Serial.print("Average: ");
-  Serial.println(average);
-  
   // TESTING: Will remvove these print statments later
-  Serial.print("Error: ");
-  Serial.println(error);
+  //Serial.print("Average: ");
+  //Serial.println(average);
+  
+  //Serial.print("Error: ");
+  //Serial.println(error);
 }
 
+/*
+ * Used data read from the various sensors to detect when the
+ * robot enteres another quadrent
+ */
 void determinQuadrent()
-{
-  // TESTING: At the moment it just does quadrent 1 but later we will determin how to 
-  // tell between the diffrent quadrents
-  //quadrent = 1;
-
-  
-  if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
+{ 
+  // Detect quadrent 2, if the robot detects a line on ether the right or
+  // left of the robot and wh where just in quadrent 1
+  //if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
+  if( quadrent == 1 && (canMoveRight() || canMoveLeft()))
   {
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 36;
+    DEFAULT_VOLTAGE = 45;
     
     delay(2000);
+    
+    sendQuadrent();
   }
   
-  // Detect quadrent 3
+  // Detect quadrent 3, if the front IR sensor reads that there is a wall and
+  // we where just in quadrent 2
   if( quadrent == 2 && frontIRNormalised == 1 )
   {
     quadrent = 3;
@@ -252,24 +295,54 @@ void determinQuadrent()
     //DEFAULT_VOLTAGE = 60;
     
     delay(2000);
+    
+    sendQuadrent();
   }
   
-  // Detect quadrent 4
-  if( quadrent == 3 && ( leftIRReading != -1 && rightIRReading != -1 ))
+  // Detect quadrent 4, if both the long range sensors on the side of the robot read
+  // values that are valid and we where just in quadrent 3
+  if( quadrent == 3 && ( leftIRReading != 0 && rightIRReading != 0 ))
   {
     quadrent = 4;
     
+    setMoterVoltages(0,0);
     delay(2000);
+    
+    sendQuadrent();
+  }
+  
+  // Detect when finished, if the sensors stop reading valid values and we where in quadrent 3
+  if( quadrent == 4 && ( leftIRReading == 0 && rightIRReading == 0 ))
+  {
+    quadrent = 5;
+    
+    //delay(2000);
+    setMoterVoltages(0,0);
+    
+    sendQuadrent();
   }
 }
 
+/*
+ * Print the quadrent to the serial, should be XBee sensor
+ */
+void sendQuadrent()
+{
+  if( quadrent == 5 ) Serial.println("Finished!");
+  else
+  {
+    Serial.print("Quadrent: ");
+    Serial.println(quadrent);
+  }
+}
+
+/*
+ * Determins how to move in the first quadrent
+ */
 void moveQuadrent1()
 {
   // Figure out how much to adjust the voltages by
-  // NOTE: There is probberly a better way to do this
-  int voltageAdjustment = (KP*error + KD*(error - lastError))/100;//error*errorScale;
-  
-  //if( abs(voltageAdjustment) <= 6 ) voltageAdjustment = 0;
+  int voltageAdjustment = (KP*error + KD*(error - lastError))/100;
   
   // Add the adjustment to left because if we want it to turn left 
   // the left moter voltage should be less than the right moter voltage
@@ -280,37 +353,48 @@ void moveQuadrent1()
   int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
   // TESTING: Will remvove these print statments later
-  Serial.print("Voltage Adjustment: ");
-  Serial.println(voltageAdjustment);
+  //Serial.print("Voltage Adjustment: ");
+  //Serial.println(voltageAdjustment);
   
-  Serial.print("Left Moter: ");
-  Serial.print(leftMoterVoltage);
-  Serial.print(". Right Moter: ");
-  Serial.println(rightMoterVoltage);
+  //Serial.print("Left Moter: ");
+  //Serial.print(leftMoterVoltage);
+  //Serial.print(". Right Moter: ");
+  //Serial.println(rightMoterVoltage);
   
   // Update the moter voltage pins
   setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
 }
 
+/*
+ * Determins how to move in quadrent 2
+ */
 void moveQuadrent2() 
 {
   // Priority: Left, Foward, Right, Turn aroud (180)
   
-  //setMoterVoltages(0,0);
-  
   if( canMoveLeft() ) turnLeft();
-  else if( canMoveFoward() ) moveQuadrent1();//moveStraight();
+  else if( canMoveFoward() ) moveQuadrent1();
   else if( canMoveRight() ) turnRight();
   else turnAround();
   
 }
 
+/*
+ * Determins how to move in quadrent 3
+ */
 void moveQuadrent3() 
 {
+  // If there is a wall turn around
   if( frontIRNormalised == 1 ) turnAround();
+  
+  // Otherwise the movement is the same as in quadrent 2
   else moveQuadrent2();
 
 }
+
+/*
+ * Determins how to move in quadrent 4
+ */
 void moveQuadrent4() 
 {
   // Diffrence will be negative if you need to move right, and positive if you need to move left
@@ -340,6 +424,10 @@ void moveQuadrent4()
 
 }
 
+/*
+ * Returns true if the robot can move foward, ie the sensor isnt just reading
+ * black under the sensors
+ */
 boolean canMoveFoward() 
 {
   for( int i = 0; i < numberOfSensors; i++ )
@@ -351,6 +439,10 @@ boolean canMoveFoward()
 
 }
 
+/*
+ * Returns true if the robot can move left, ie the sensor is reading white
+ * for 4 or more sensors starting from the left
+ */
 boolean canMoveLeft() 
 {
   int leftCount = 0;
@@ -366,6 +458,10 @@ boolean canMoveLeft()
   return false;
 }
 
+/*
+ * Returns true if the robot can move right, ie the sensor is reading white
+ * for 4 or more sensors starting from the right
+ */
 boolean canMoveRight() 
 {
   int rightCount = 0;
@@ -382,6 +478,11 @@ boolean canMoveRight()
 
 }
 
+/*
+ * Returns true if the robot is centered on the line, ie if atleast two
+ * adjaceant sensors in the array are reading white, how ever this only 
+ * looks at the middle 4 sensors of the array
+ */
 boolean isCenteredOnLine()
 {
   readQTRSensor();
@@ -393,22 +494,15 @@ boolean isCenteredOnLine()
     if(normalisedOutput[i] == 1) count++;
     else if(count == 1) return false;
     
-    if(count == 2) 
-    {
-      Serial.println("Is centered on line");
-      //delay(2000);
-      return true;
-    }
+    if(count == 2) return true;
   }
   
   return false;
-  
-  //readQTRSensor();
-  //calculateError();
-  
-  //return ( error == 0 );
 }
 
+/*
+ * Turns the robot left by aprox 90 degrees
+ */
 void turnLeft() 
 {
   preRotationMove();
@@ -438,6 +532,9 @@ void turnLeft()
   digitalWrite(DIRECTION_MOTER2, HIGH);
 }
 
+/*
+ * Turns the robot right by aprox 90 degrees
+ */
 void turnRight() 
 {
   preRotationMove();
@@ -467,6 +564,9 @@ void turnRight()
   digitalWrite(DIRECTION_MOTER2, HIGH);
 }
 
+/*
+ * Turns the robot by aprox 180 degrees
+ */
 void turnAround() 
 {
   digitalWrite(DIRECTION_MOTER1, LOW);
@@ -509,11 +609,9 @@ void turnAround()
   digitalWrite(DIRECTION_MOTER2, HIGH);
 }
 
-void moveStraight()
-{
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-}
-
+/*
+ * Offsets the robot for any left or right rotation
+ */
 void preRotationMove()
 {
   // If we are in quadrent 4 we dont need to move 
@@ -524,13 +622,14 @@ void preRotationMove()
   }
 }
 
+/*
+ * Update the moter voltages to the ones passed to the function
+ */
 void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
 {
-   //if( newLeftVoltage < newRightVoltage ) Serial.println("LEFT");
-   //else if( newLeftVoltage > newRightVoltage ) Serial.println("RIGHT"); 
-   
-   if( newLeftVoltage < 0 ) newLeftVoltage = 0;
-   if( newRightVoltage < 0 ) newRightVoltage = 0;
+  // Make sure the voltages arnt negative  
+  if( newLeftVoltage < 0 ) newLeftVoltage = 0;
+  if( newRightVoltage < 0 ) newRightVoltage = 0;
    
   // Write the new voltages to the voltage pins
   analogWrite(VOLTAGE_MOTER1, newLeftVoltage);
