@@ -55,6 +55,9 @@ int error = 0;
 // adjustment
 int lastError = 0;
 
+// Stores the last diffrence for quadrent 4
+double lastDiffrence = 0;
+
 //float KP = 0.9;
 //float KD = 2;
 
@@ -396,10 +399,10 @@ void moveQuadrent3()
  * Determins how to move in quadrent 4
  */
 void moveQuadrent4() 
-{
+{ 
   // Diffrence will be negative if you need to move right, and positive if you need to move left
   double diffrence = leftIRReading - rightIRReading;
-  
+   
   if( frontIRNormalised == 1 )
   {
     if ( rightIRReading == 0 && leftIRReading == 0 ) turnAround();
@@ -408,12 +411,16 @@ void moveQuadrent4()
   }
   else
   {
-    int voltageAdjustment = ((KP)*error + KD*(error - lastError));
+    int voltageAdjustment = ((KP)*diffrence + KD*(diffrence - lastDiffrence));
   
     // Add the adjustment to left because if we want it to turn left 
     // the left moter voltage should be less than the right moter voltage
     // and the error is negative if robot needs to turn left
     int leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
+    
+    // TESTING: Remove these print staments later
+    Serial.print("Quad 4 Voltage Adjustment");
+    Serial.println(voltageAdjustment);
   
     // Substract the adjustment from the right moter voltage
     int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
@@ -421,7 +428,9 @@ void moveQuadrent4()
     // Update the moter voltage pins
     setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
-
+  
+  // Keep track of the last error
+  lastDiffrence = diffrence;
 }
 
 /*
