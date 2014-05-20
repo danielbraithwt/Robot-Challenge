@@ -18,9 +18,10 @@ int DIRECTION_MOTER1 = 13;
 int DIRECTION_MOTER2 = 12;
 
 // Default voltage constant
-int DEFAULT_VOLTAGE = 50;
+int DEFAULT_VOLTAGE = 41;
 
-int cyclePeriodMil = 20;
+int cyclePeriodMil = 0
+   ;
 
 int rotationPeriodMil = 200;
 int preRotationPeriodMil = 500;
@@ -64,7 +65,7 @@ double lastDiffrence = 0;
 //float KP = 1.1;
 //float KD = 2;
 float KP = 0.5;
-float KD = 1.7;
+float KD = 3.1;
 
 
 
@@ -631,7 +632,7 @@ void preRotationMove()
   if( quadrent != 4 )
   {
     setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-    delay(200);
+    delay(50);
   }
 }
 
