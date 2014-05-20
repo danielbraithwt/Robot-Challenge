@@ -89,7 +89,7 @@ void setup()
   digitalWrite(DIRECTION_MOTER1, HIGH);
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
-  delay(2000);
+  //delay(2000);
 }
 
 void loop()
@@ -286,7 +286,7 @@ void determinQuadrent()
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    //DEFAULT_VOLTAGE = 45;
+    DEFAULT_VOLTAGE = 43;
     
     delay(2000);
     
@@ -457,7 +457,8 @@ boolean canMoveFoward()
  * Returns true if the robot can move left, ie the sensor is reading white
  * for 4 or more sensors starting from the left
  */
-boolean canMoveLeft() 
+//boolean canMoveLeft() 
+boolean canMoveRight()
 {
   int leftCount = 0;
   
@@ -476,7 +477,8 @@ boolean canMoveLeft()
  * Returns true if the robot can move right, ie the sensor is reading white
  * for 4 or more sensors starting from the right
  */
-boolean canMoveRight() 
+//boolean canMoveRight()
+boolean canMoveLeft()
 {
   int rightCount = 0;
   
@@ -521,8 +523,11 @@ void turnLeft()
 {
   preRotationMove();
   
-  digitalWrite(DIRECTION_MOTER1, HIGH);
-  digitalWrite(DIRECTION_MOTER2, LOW);
+  //digitalWrite(DIRECTION_MOTER1, HIGH);
+  //digitalWrite(DIRECTION_MOTER2, LOW);
+  
+  digitalWrite(DIRECTION_MOTER1, LOW);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
   
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
   delay(preRotationPeriodMil);
@@ -553,8 +558,11 @@ void turnRight()
 {
   preRotationMove();
   
-  digitalWrite(DIRECTION_MOTER1, LOW);
-  digitalWrite(DIRECTION_MOTER2, HIGH);
+  //digitalWrite(DIRECTION_MOTER1, LOW);
+  //digitalWrite(DIRECTION_MOTER2, HIGH);
+  
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, LOW);
   
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
   delay(preRotationPeriodMil);
