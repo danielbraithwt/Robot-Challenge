@@ -19,11 +19,12 @@ int DIRECTION_MOTER2 = 12;
 
 // Default voltage constant
 int DEFAULT_VOLTAGE = 41;
+int RIGHT_MOTER_OFFSET = 3;
 
 int cyclePeriodMil = 0;
 
 int rotationPeriodMil = 200;
-int preRotationPeriodMil = 500;
+int preRotationPeriodMil = 800;
 
 // Number of sensors in the QRT Sensor array
 int numberOfSensors = 8;
@@ -58,6 +59,9 @@ int lastError = 0;
 // Stores the last diffrence for quadrent 4
 double lastDiffrence = 0;
 
+// 
+boolean wasRight = false;
+
 //float KP = 0.9;
 //float KD = 2;
 
@@ -75,6 +79,10 @@ void setup()
 {
   Serial.begin(9600);
 
+  boadcastRadio("Connecting      ");
+
+  delay(6000);
+
   // Setup the moter controll pins
   pinMode(VOLTAGE_MOTER1, OUTPUT);
   pinMode(VOLTAGE_MOTER2, OUTPUT);
@@ -82,11 +90,14 @@ void setup()
   pinMode(DIRECTION_MOTER2, OUTPUT);
   
   // Set robot to stationary
+  //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE+5);
   setMoterVoltages(0, 0);
   
   // Set both moters to foward
   digitalWrite(DIRECTION_MOTER1, HIGH);
   digitalWrite(DIRECTION_MOTER2, HIGH);
+  
+  sendQuadrent();
   
   //delay(2000);
 }
@@ -95,7 +106,7 @@ void loop()
 {
   // Read from the sensor, unless we are in quadrent 4 because
   // we dont need to worry about it
-  if( quadrent < 4 ) readQTRSensor();
+  readQTRSensor();
   
   // Read from the front IR sensor if we are in any quadrent but the first
   if( quadrent >= 2 ) readFrontIRSensor();
@@ -123,7 +134,7 @@ void loop()
   else if( quadrent == 3 ) moveQuadrent3();
   else if( quadrent == 4 ) moveQuadrent4();
   
-  delay(cyclePeriodMil);
+  //delay(cyclePeriodMil);
 }
 
 /*
@@ -285,7 +296,7 @@ void determinQuadrent()
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 43;
+    DEFAULT_VOLTAGE = 40;
     
     delay(2000);
     
@@ -335,11 +346,11 @@ void determinQuadrent()
  */
 void sendQuadrent()
 {
-  if( quadrent == 1 ) boadcastRadio("Quadrent: 1      ");
-  else if( quadrent == 2 ) boadcastRadio("Quadrent: 2      ");
-  else if( quadrent == 3 ) boadcastRadio("Quadrent: 3      ");
-  else if( quadrent == 4 ) boadcastRadio("Quadrent: 4      ");
-  else if( quadrent == 5 ) boadcastRadio("Finished!        ");//Serial.println("Finished!");
+  if( quadrent == 1 ) boadcastRadio("Quadrent: 1     ");
+  else if( quadrent == 2 ) boadcastRadio("Quadrent: 2     ");
+  else if( quadrent == 3 ) boadcastRadio("Quadrent: 3     ");
+  else if( quadrent == 4 ) boadcastRadio("Quadrent: 4     ");
+  else if( quadrent == 5 ) boadcastRadio("Finished!       ");//Serial.println("Finished!");
   //else
   //{
   //  char toSend[] = "Quadrent: " + char(quadrent);
@@ -437,7 +448,7 @@ void moveQuadrent1()
   Serial.println(rightMoterVoltage);
   
   // Update the moter voltage pins
-  setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
+  setMoterVoltages( leftMoterVoltage, rightMoterVoltage + RIGHT_MOTER_OFFSET );
 }
 
 /*
@@ -449,8 +460,10 @@ void moveQuadrent2()
   
   if( canMoveLeft() ) turnLeft();
   else if( canMoveFoward() ) moveQuadrent1();
-  else if( canMoveRight() ) turnRight();
+  else if( wasRight ) turnRight();
   else turnAround();
+  
+  wasRight = canMoveRight();
   
 }
 
@@ -536,7 +549,11 @@ boolean canMoveRight()
     else break;
   }
   
-  if( leftCount >= 4 ) return true;
+  if( leftCount >= 4 ) 
+  {
+    boadcastRadio("Can Turn Right  ");
+    return true;
+  }
   return false;
 }
 
@@ -556,7 +573,11 @@ boolean canMoveLeft()
     else break;  
   }
   
-  if( rightCount >= 4 ) return true;
+  if( rightCount >= 4 ) 
+  {
+    boadcastRadio("Can Turn Left   ");
+    return true;
+  }
   return false;
 
 }
@@ -588,6 +609,7 @@ boolean isCenteredOnLine()
  */
 void turnLeft() 
 {
+  boadcastRadio("Turning Left    ");
   preRotationMove();
   
   //digitalWrite(DIRECTION_MOTER1, HIGH);
@@ -596,14 +618,14 @@ void turnLeft()
   digitalWrite(DIRECTION_MOTER1, LOW);
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
   delay(preRotationPeriodMil);
   
   if( quadrent == 2 || quadrent == 3 )
   {
     while(!isCenteredOnLine())
     {
-      //delay(rotationPeriodMil);
+      delay(rotationPeriodMil);
     }
   }
   else
@@ -623,7 +645,10 @@ void turnLeft()
  */
 void turnRight() 
 {
-  preRotationMove();
+  backPreRotationMove();
+  
+  boadcastRadio("Turning Right    ");
+  //preRotationMove();
   
   //digitalWrite(DIRECTION_MOTER1, LOW);
   //digitalWrite(DIRECTION_MOTER2, HIGH);
@@ -631,14 +656,14 @@ void turnRight()
   digitalWrite(DIRECTION_MOTER1, HIGH);
   digitalWrite(DIRECTION_MOTER2, LOW);
   
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
   delay(preRotationPeriodMil);
   
   if( quadrent == 2 || quadrent == 3 )
   {
     while(!isCenteredOnLine())
     {
-      //delay(rotationPeriodMil);
+      delay(rotationPeriodMil);
     }
   }
   else 
@@ -658,12 +683,16 @@ void turnRight()
  */
 void turnAround() 
 {
+  //backPreRotationMove();
+  
+  boadcastRadio("Turning Around  ");
   digitalWrite(DIRECTION_MOTER1, LOW);
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
   if( quadrent == 2 || quadrent == 3 )
   {
-    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+    
+    setMoterVoltages(DEFAULT_VOLTAGE-3, DEFAULT_VOLTAGE-3 + RIGHT_MOTER_OFFSET );
     delay(preRotationPeriodMil);
     
     while(!isCenteredOnLine())
@@ -676,7 +705,7 @@ void turnAround()
     double preRotationLeft = leftIRReading;
     double preRotationRight = rightIRReading;
     
-    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
     delay(preRotationPeriodMil);
     
     readLeftIRSensor();
@@ -706,9 +735,38 @@ void preRotationMove()
   // If we are in quadrent 4 we dont need to move 
   if( quadrent != 4 )
   {
-    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-    delay(50);
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+    
+    while( canMoveLeft() || canMoveRight() ) readQTRSensor();
+    
+    delay(150);
+    
+    setMoterVoltages(0, 0);
+    //delay(350);
+    //delay(100);
+    //delay(200);
   }
+}
+
+void backPreRotationMove()
+{
+  if( quadrent != 4 )
+  {
+    setMoterVoltages(0, 0);
+    
+    digitalWrite(DIRECTION_MOTER1, LOW);
+    digitalWrite(DIRECTION_MOTER2, LOW);
+    
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+    
+    delay(350);
+    
+    setMoterVoltages(0, 0);
+    
+    digitalWrite(DIRECTION_MOTER1, HIGH);
+    digitalWrite(DIRECTION_MOTER2, HIGH);
+   
+  } 
 }
 
 /*
