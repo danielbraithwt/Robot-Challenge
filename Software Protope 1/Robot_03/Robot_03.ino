@@ -19,11 +19,12 @@ int DIRECTION_MOTER2 = 12;
 
 // Default voltage constant
 int DEFAULT_VOLTAGE = 41;
-int RIGHT_MOTER_OFFSET = 5;
+int RIGHT_MOTER_OFFSET = 3;
 
 int cyclePeriodMil = 0;
 
-int rotationPeriodMil = 200;
+//int rotationPeriodMil = 300;
+int rotationPeriodMil = 0;
 int preRotationPeriodMil = 900;
 
 // Number of sensors in the QRT Sensor array
@@ -91,7 +92,8 @@ void setup()
   pinMode(DIRECTION_MOTER2, OUTPUT);
   
   // Set robot to stationary
-  //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE+5);
+  
+  
   setMoterVoltages(0, 0);
   
   // Set both moters to foward
@@ -99,6 +101,10 @@ void setup()
   digitalWrite(DIRECTION_MOTER2, HIGH);
   
   sendQuadrent();
+  
+  //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE+5);
+  
+  //delay(5000);
   
   //delay(2000);
 }
@@ -298,7 +304,7 @@ void determinQuadrent()
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 39;
+    DEFAULT_VOLTAGE = 37;
     
     delay(2000);
     
@@ -610,6 +616,23 @@ boolean isCenteredOnLine()
 {
   readQTRSensor();
   
+  if( isAllWhite() ) return false;
+  
+  //if( normalisedOutput[0] == 1 ) return false;
+  //else if( normalisedOutput[numberOfSensors-1] == 1 ) return false;
+  
+  for( int i = 0; i < 2; i++ )
+  {
+    if( normalisedOutput[i] == 1 ) return false;
+    
+  }
+  
+  for( int i = numberOfSensors-2; i < numberOfSensors; i++ )
+  {
+    if( normalisedOutput[i] == 1 ) return false;
+    
+  }
+  
   int count = 0;
   
   for( int i = 2; i < numberOfSensors-2; i++ )
@@ -617,10 +640,26 @@ boolean isCenteredOnLine()
     if(normalisedOutput[i] == 1) count++;
     else if(count == 1) return false;
     
-    if(count == 2) return true;
+    if(count == 2) 
+    {
+      boadcastRadio("Is Centered On L");
+      return true;
+    }
   }
   
   return false;
+}
+
+boolean isAllWhite()
+{
+  for( int i = 0; i < numberOfSensors; i++ )
+  {
+    if( normalisedOutput[i] == 0 ) return false;
+    
+  }
+  
+  return true;
+  
 }
 
 /*
@@ -665,7 +704,13 @@ void turnLeft()
  */
 void turnRight() 
 {
+  //setMoterVoltages(0,0);
+  //delay( 4000);
+  
   backPreRotationMove();
+  
+  //setMoterVoltages(0,0);
+  //delay( 4000 );
   
   //boadcastRadio("Turning Right    ");
   Serial.println("Turning Right");
@@ -704,7 +749,15 @@ void turnRight()
  */
 void turnAround() 
 {
+  //setMoterVoltages(0,0);
+  //delay( 4000);
+  
   backPreRotationMove();
+  
+  //setMoterVoltages(0,0);
+  //delay( 4000 );
+  
+  //backPreRotationMove();
   
   //boadcastRadio("Turning Around  ");
   Serial.println("Turning Around");
