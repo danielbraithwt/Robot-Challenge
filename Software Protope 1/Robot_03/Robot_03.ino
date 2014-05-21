@@ -19,12 +19,12 @@ int DIRECTION_MOTER2 = 12;
 
 // Default voltage constant
 int DEFAULT_VOLTAGE = 41;
-int RIGHT_MOTER_OFFSET = 3;
+int RIGHT_MOTER_OFFSET = 5;
 
 int cyclePeriodMil = 0;
 
 int rotationPeriodMil = 200;
-int preRotationPeriodMil = 800;
+int preRotationPeriodMil = 900;
 
 // Number of sensors in the QRT Sensor array
 int numberOfSensors = 8;
@@ -81,7 +81,8 @@ void setup()
 
   boadcastRadio("Connecting      ");
 
-  delay(6000);
+  //
+  //delay(6000);
 
   // Setup the moter controll pins
   pinMode(VOLTAGE_MOTER1, OUTPUT);
@@ -175,6 +176,7 @@ void readFrontIRSensor()
   
   // Normalise the reading to 0 ( no wall ), 1 ( wall )
   if( frontIRReading > 200 ) frontIRNormalised = 0;
+  else frontIRNormalised = 1;
 }
 
 /*
@@ -296,7 +298,7 @@ void determinQuadrent()
     quadrent = 2;
     setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 40;
+    DEFAULT_VOLTAGE = 39;
     
     delay(2000);
     
@@ -460,7 +462,24 @@ void moveQuadrent2()
   
   if( canMoveLeft() ) turnLeft();
   else if( canMoveFoward() ) moveQuadrent1();
-  else if( wasRight ) turnRight();
+  else if( wasRight ) 
+  {
+    //setMoterVoltages(0, 0);
+    
+    //digitalWrite(DIRECTION_MOTER1, LOW);
+    //digitalWrite(DIRECTION_MOTER2, LOW);
+    
+    //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+    
+    //while( !canMoveFoward() ) readQTRSensor();
+    
+    //setMoterVoltages(0, 0);
+    
+    //digitalWrite(DIRECTION_MOTER1, HIGH);
+    //digitalWrite(DIRECTION_MOTER2, HIGH);
+    
+    turnRight();
+  }
   else turnAround();
   
   wasRight = canMoveRight();
@@ -609,7 +628,8 @@ boolean isCenteredOnLine()
  */
 void turnLeft() 
 {
-  boadcastRadio("Turning Left    ");
+  //boadcastRadio("Turning Left    ");
+  Serial.println("Turning Left");
   preRotationMove();
   
   //digitalWrite(DIRECTION_MOTER1, HIGH);
@@ -647,7 +667,8 @@ void turnRight()
 {
   backPreRotationMove();
   
-  boadcastRadio("Turning Right    ");
+  //boadcastRadio("Turning Right    ");
+  Serial.println("Turning Right");
   //preRotationMove();
   
   //digitalWrite(DIRECTION_MOTER1, LOW);
@@ -683,16 +704,17 @@ void turnRight()
  */
 void turnAround() 
 {
-  //backPreRotationMove();
+  backPreRotationMove();
   
-  boadcastRadio("Turning Around  ");
-  digitalWrite(DIRECTION_MOTER1, LOW);
-  digitalWrite(DIRECTION_MOTER2, HIGH);
+  //boadcastRadio("Turning Around  ");
+  Serial.println("Turning Around");
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, LOW);
   
   if( quadrent == 2 || quadrent == 3 )
   {
     
-    setMoterVoltages(DEFAULT_VOLTAGE-3, DEFAULT_VOLTAGE-3 + RIGHT_MOTER_OFFSET );
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
     delay(preRotationPeriodMil);
     
     while(!isCenteredOnLine())
@@ -735,13 +757,13 @@ void preRotationMove()
   // If we are in quadrent 4 we dont need to move 
   if( quadrent != 4 )
   {
-    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+    //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
     
-    while( canMoveLeft() || canMoveRight() ) readQTRSensor();
+    //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
     
-    delay(150);
+    //delay(50);
     
-    setMoterVoltages(0, 0);
+    //setMoterVoltages(0, 0);
     //delay(350);
     //delay(100);
     //delay(200);
@@ -759,7 +781,7 @@ void backPreRotationMove()
     
     setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
     
-    delay(350);
+    delay(300);
     
     setMoterVoltages(0, 0);
     
