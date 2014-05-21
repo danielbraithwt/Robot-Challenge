@@ -4,7 +4,7 @@
 // Distance (cm) = 2076/(SensorValue - 11) //
 /////////////////////////////////////////////
 
-int SENSOR_IN = 0;
+int SENSOR_IN = 1;
 
 void setup()
 {

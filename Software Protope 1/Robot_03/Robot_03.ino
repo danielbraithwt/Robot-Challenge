@@ -74,7 +74,7 @@ float KD = 3.1;
 
 
 // Stores the current quadrent the robot is in
-int quadrent = 1;
+int quadrent = 4;
 
 void setup()
 {
@@ -192,6 +192,9 @@ void readFrontIRSensor()
 void readLeftIRSensor()
 {
   leftIRReading = readLongRangeIRSensor(LEFT_IR_SENSOR_PIN);
+  
+  Serial.print("Left IR Reading: ");
+  Serial.println(leftIRReading);
 }
 
 /*
@@ -201,6 +204,9 @@ void readLeftIRSensor()
 void readRightIRSensor()
 {
   rightIRReading = readLongRangeIRSensor(RIGHT_IR_SENSOR_PIN);
+  
+  Serial.print("Right IR Reading: ");
+  Serial.println(rightIRReading);
 }
 
 /*
@@ -217,10 +223,15 @@ double readLongRangeIRSensor( int pin )
   // the distance, if its outside the valid range of sensor values
   // just leave the distance as 0 because otherwise we will get incorrect distances
   double distance = 0;
-  if( reading >= 80 && reading <=530 ) 
-  {
-    distance= 2076.0/(reading - 11);
-  }
+  
+  distance = pow(43235.4289561224, -1.1129015462);
+  //if( reading >= 80 && reading <= 530 ) 
+  //{
+  //  distance= 2076.0/(reading - 11);
+  //}
+  
+  //float volts = reading*0.0048828125;   // value from sensor * (5/1024) - if running 3.3.volts then change 5 to 3.3
+  //distance = 65*pow(volts, -1.10);
   
   // TESTING: Will remove these print statments for final revision
   Serial.print("Distance: ");
@@ -229,8 +240,8 @@ double readLongRangeIRSensor( int pin )
   Serial.println(reading);
   
   // TESTING: Return 0 while sensors arnt connected
-  return 0;  
-  //return reading;
+  //return 0;  
+  return reading;
   
 }
 
@@ -338,15 +349,15 @@ void determinQuadrent()
   }
   
   // Detect when finished, if the sensors stop reading valid values and we where in quadrent 3
-  if( quadrent == 4 && ( leftIRReading == 0 && rightIRReading == 0 ))
-  {
-    quadrent = 5;
+  //if( quadrent == 4 && ( leftIRReading == 0 && rightIRReading == 0 ))
+  //{
+  //  quadrent = 5;
     
     //delay(2000);
-    setMoterVoltages(0,0);
+  //  setMoterVoltages(0,0);
     
-    sendQuadrent();
-  }
+  //  sendQuadrent();
+  //}
 }
 
 /*
@@ -510,34 +521,57 @@ void moveQuadrent3()
  */
 void moveQuadrent4() 
 { 
+  float KP4 = 0.9;
+  float KD4 = 0.6;
+  
   // Diffrence will be negative if you need to move right, and positive if you need to move left
   double diffrence = leftIRReading - rightIRReading;
+  
+  if( frontIRNormalised != 1 )
+  {
+    
+  
+    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence))/100;
+  
+    int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) - voltageAdjustment;  
+  
+    int leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
+  
+    Serial.print("Quad 4 Voltage Adjustment");
+    Serial.println(voltageAdjustment);
    
-  if( frontIRNormalised == 1 )
-  {
-    if ( rightIRReading == 0 && leftIRReading == 0 ) turnAround();
-    else if( rightIRReading == 0 ) turnRight();
-    else if( leftIRReading == 0 ) turnLeft();
+    // Update the moter voltage pins
+    setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
-  else
-  {
-    int voltageAdjustment = ((KP)*diffrence + KD*(diffrence - lastDiffrence));
+  else setMoterVoltages(0,0);
+   
+  //if( frontIRNormalised == 1 )
+  //{
+  //  if ( rightIRReading == 0 && leftIRReading == 0 ) turnAround();
+  //  else if( rightIRReading == 0 ) turnRight();
+  //  else if( leftIRReading == 0 ) turnLeft();
+  //}
+  //else
+  //{
+  //  int voltageAdjustment = ((KP)*diffrence + KD*(diffrence - lastDiffrence));
   
     // Add the adjustment to left because if we want it to turn left 
     // the left moter voltage should be less than the right moter voltage
     // and the error is negative if robot needs to turn left
-    int leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
+  //  int leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
     
     // TESTING: Remove these print staments later
-    Serial.print("Quad 4 Voltage Adjustment");
-    Serial.println(voltageAdjustment);
+  //  Serial.print("Quad 4 Voltage Adjustment");
+  //  Serial.println(voltageAdjustment);
   
     // Substract the adjustment from the right moter voltage
-    int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
+  //  int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
     // Update the moter voltage pins
-    setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
-  }
+  //  setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
+  //}
+  
+  
   
   // Keep track of the last error
   lastDiffrence = diffrence;
