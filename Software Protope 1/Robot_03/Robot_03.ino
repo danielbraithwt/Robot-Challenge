@@ -224,7 +224,7 @@ double readLongRangeIRSensor( int pin )
   // just leave the distance as 0 because otherwise we will get incorrect distances
   double distance = 0;
   
-  distance = pow(43235.4289561224, -1.1129015462);
+  distance = 43235.4289561224 * pow(reading, -1.1129015462);
   //if( reading >= 80 && reading <= 530 ) 
   //{
   //  distance= 2076.0/(reading - 11);
@@ -234,14 +234,14 @@ double readLongRangeIRSensor( int pin )
   //distance = 65*pow(volts, -1.10);
   
   // TESTING: Will remove these print statments for final revision
-  Serial.print("Distance: ");
-  Serial.print(distance);
-  Serial.print(". Reading: ");
-  Serial.println(reading);
+  //Serial.print("Distance: ");
+  //Serial.print(distance);
+  //Serial.print(". Reading: ");
+  //Serial.println(reading);
   
   // TESTING: Return 0 while sensors arnt connected
   //return 0;  
-  return reading;
+  return distance;
   
 }
 
@@ -531,13 +531,13 @@ void moveQuadrent4()
   {
     
   
-    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence))/100;
+    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
   
-    int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) - voltageAdjustment;  
+    int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
   
-    int leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
+    int leftMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
-    Serial.print("Quad 4 Voltage Adjustment");
+    Serial.print("Quad 4 Voltage Adjustment ");
     Serial.println(voltageAdjustment);
    
     // Update the moter voltage pins
