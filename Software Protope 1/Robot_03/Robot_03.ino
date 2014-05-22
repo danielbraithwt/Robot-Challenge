@@ -5,9 +5,11 @@ int FRONT_IR_SENSOR_PIN = 0;
 
 // Analog pin for the left long range ir sensor
 int LEFT_IR_SENSOR_PIN = 1;
+int LEFT_SHORT_IR_SENSOR_PIN = 3;
 
 // Analog pin for the right long range ir sensor
 int RIGHT_IR_SENSOR_PIN = 2;
+int RIGHT_SHORT_IR_SENSOR_PIN = 4;
 
 // Pins that control the voltage to the moters
 int VOLTAGE_MOTER1 = 11;
@@ -42,10 +44,13 @@ int normalisedOutput[8];
 
 // Stores IR read values
 int frontIRReading = 0;
-int frontIRNormalised = 0;
+int frontShortIRNormalised = 0;
+int leftShortIRNormalised = 0;
+int rightShortIRNormalised = 0;
 
 // Left IR sensor values
 double leftIRReading = 0;
+double lastLeftIRReading = 0;
 
 // Right IR sensor values
 double rightIRReading = 0;
@@ -116,16 +121,25 @@ void loop()
   readQTRSensor();
   
   // Read from the front IR sensor if we are in any quadrent but the first
-  if( quadrent >= 2 ) readFrontIRSensor();
+  if( quadrent >= 2 ) readFrontShortIRSensor();
   
   // If we are in the 4th quadrent read from the IR sensors
   // on the side of the robot
-  if( quadrent == 4 )
+  if( quadrent >= 3 )
   {
     // Read from the left IR sensor
-    readLeftIRSensor();
+    
+    readLeftShortIRSensor();
   
     // Read from the right IR sensor
+    
+    readRightShortIRSensor();
+  }
+  
+  if( quadrent == 4 )
+  {
+    readLeftIRSensor();
+    
     readRightIRSensor();
   }
   
@@ -174,15 +188,39 @@ void readQTRSensor()
  * Reads from the front digital short range IR sensor, it then assigns frontIRReading
  * 0 if there is nothing in the way and it assigns 1 if there is a wall in the way
  */
-void readFrontIRSensor()
+void readFrontShortIRSensor()
 {
   // Read the digital sensor as analog, will give a value between 0 and
   // 1024
-  frontIRReading = analogRead(FRONT_IR_SENSOR_PIN);
+  //frontIRReading = analogRead(FRONT_IR_SENSOR_PIN);
   
   // Normalise the reading to 0 ( no wall ), 1 ( wall )
-  if( frontIRReading > 200 ) frontIRNormalised = 0;
-  else frontIRNormalised = 1;
+  //if( frontIRReading > 200 ) frontIRNormalised = 0;
+  //else frontIRNormalised = 1;
+  frontShortIRNormalised = readShortIRSensor(FRONT_IR_SENSOR_PIN);
+}
+
+void readLeftShortIRSensor()
+{
+  leftShortIRNormalised = readShortIRSensor(LEFT_SHORT_IR_SENSOR_PIN);
+  
+}
+
+void readRightShortIRSensor()
+{
+  rightShortIRNormalised = readShortIRSensor(RIGHT_SHORT_IR_SENSOR_PIN);
+}
+
+int readShortIRSensor(int pin)
+{
+   // Read the digital sensor as analog, will give a value between 0 and
+  // 1024
+  int reading = analogRead(pin);
+  
+  // Normalise the reading to 0 ( no wall ), 1 ( wall )
+  if( reading > 200 ) return 0;
+  else return 1;
+  
 }
 
 /*
@@ -324,7 +362,7 @@ void determinQuadrent()
   
   // Detect quadrent 3, if the front IR sensor reads that there is a wall and
   // we where just in quadrent 2
-  if( quadrent == 2 && frontIRNormalised == 1 )
+  if( quadrent == 2 && frontShortIRNormalised == 1 )
   {
     quadrent = 3;
     setMoterVoltages(0,0);
@@ -338,7 +376,7 @@ void determinQuadrent()
   
   // Detect quadrent 4, if both the long range sensors on the side of the robot read
   // values that are valid and we where just in quadrent 3
-  if( quadrent == 3 && ( leftIRReading != 0 && rightIRReading != 0 ))
+  if( quadrent == 3 && ( leftShortIRNormalised == 1 && rightShortIRNormalised == 1 ))
   {
     quadrent = 4;
     
@@ -509,7 +547,7 @@ void moveQuadrent2()
 void moveQuadrent3() 
 {
   // If there is a wall turn around
-  if( frontIRNormalised == 1 ) turnAround();
+  if( frontShortIRNormalised == 1 ) turnAround();
   
   // Otherwise the movement is the same as in quadrent 2
   else moveQuadrent2();
@@ -521,17 +559,17 @@ void moveQuadrent3()
  */
 void moveQuadrent4() 
 { 
-  float KP4 = 0.9;
-  float KD4 = 0.6;
+  float KP4 = 0.7;
+  float KD4 = 1.4;
   
   // Diffrence will be negative if you need to move right, and positive if you need to move left
-  double diffrence = leftIRReading - rightIRReading;
+  //double diffrence = leftIRReading - rightIRReading;
+  double diffrence = leftIRReading - lastLeftIRReading;
   
-  if( frontIRNormalised != 1 )
+  if( leftShortIRNormalised == 0 ) turnLeft();
+  else if( frontShortIRNormalised == 0 )
   {
-    
-  
-    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
+    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence))/5;
   
     int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
   
@@ -543,7 +581,10 @@ void moveQuadrent4()
     // Update the moter voltage pins
     setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
+  else if ( rightShortIRNormalised == 0 ) turnRight();
   else setMoterVoltages(0,0);
+  
+  lastLeftIRReading = leftIRReading;
    
   //if( frontIRNormalised == 1 )
   //{
@@ -723,7 +764,9 @@ void turnLeft()
   }
   else
   {
-    while( leftIRReading != 0 );
+    
+    delay(300);
+    //while( leftIRReading != 0 );
     
   }
   
@@ -741,7 +784,8 @@ void turnRight()
   //setMoterVoltages(0,0);
   //delay( 4000);
   
-  backPreRotationMove();
+  if( quadrent != 4 ) backPreRotationMove();
+  else preRotationMove();
   
   //setMoterVoltages(0,0);
   //delay( 4000 );
@@ -749,6 +793,8 @@ void turnRight()
   //boadcastRadio("Turning Right    ");
   Serial.println("Turning Right");
   //preRotationMove();
+  
+  double origonalLeftReading = leftIRReading;
   
   //digitalWrite(DIRECTION_MOTER1, LOW);
   //digitalWrite(DIRECTION_MOTER2, HIGH);
@@ -768,7 +814,17 @@ void turnRight()
   }
   else 
   {
-    while( rightIRReading != 0 );
+    
+    delay( 300 );
+    //readLeftIRSensor();
+    
+    //while( abs( origonalLeftReading - leftIRReading ) > 0.1 )
+    //{
+    //  readLeftIRSensor();
+    //}
+    
+    
+    //while( rightIRReading != 0 );
     
   }
   
@@ -842,19 +898,16 @@ void turnAround()
 void preRotationMove()
 {
   // If we are in quadrent 4 we dont need to move 
-  if( quadrent != 4 )
-  {
-    //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
     
-    //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
+  //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
     
-    //delay(50);
+  delay(150);
     
-    //setMoterVoltages(0, 0);
-    //delay(350);
-    //delay(100);
-    //delay(200);
-  }
+  setMoterVoltages(0, 0);
+  //delay(350);
+  //delay(100);
+  //delay(200);
 }
 
 void backPreRotationMove()
