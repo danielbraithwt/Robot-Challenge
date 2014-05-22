@@ -20,8 +20,8 @@ int DIRECTION_MOTER1 = 13;
 int DIRECTION_MOTER2 = 12;
 
 // Default voltage constant
-int DEFAULT_VOLTAGE = 41;
-int RIGHT_MOTER_OFFSET = 3;
+int DEFAULT_VOLTAGE = 42;
+int RIGHT_MOTER_OFFSET = 0;
 
 int cyclePeriodMil = 0;
 
@@ -33,8 +33,8 @@ int preRotationPeriodMil = 900;
 int numberOfSensors = 8;
 
 // Create the QTR Sensor object
-//QTRSensorsRC qtr((unsigned char[]) { 2, 4, 5, 6, 7 ,8 ,9, 10 }, numberOfSensors);
-QTRSensorsRC qtr((unsigned char[]) { 10, 9, 8, 7, 6, 5, 4, 2 }, numberOfSensors);
+QTRSensorsRC qtr((unsigned char[]) { 2, 4, 5, 6, 7 ,8 ,9, 10 }, numberOfSensors);
+//QTRSensorsRC qtr((unsigned char[]) { 10, 9, 8, 7, 6, 5, 4, 2 }, numberOfSensors);
 
 // Array to store the output from the QTR Sensor read
 unsigned int output[8];
@@ -71,15 +71,15 @@ boolean wasRight = false;
 //float KP = 0.9;
 //float KD = 2;
 
-//float KP = 1.1;
+//float KP = 1.1;0
 //float KD = 2;
 float KP = 0.5;
-float KD = 3.1;
+float KD = 2.8;
 
 
 
 // Stores the current quadrent the robot is in
-int quadrent = 4;
+int quadrent = 1;
 
 void setup()
 {
@@ -87,8 +87,7 @@ void setup()
 
   boadcastRadio("Connecting      ");
 
-  //
-  //delay(6000);
+  
 
   // Setup the moter controll pins
   pinMode(VOLTAGE_MOTER1, OUTPUT);
@@ -347,15 +346,15 @@ void determinQuadrent()
 { 
   // Detect quadrent 2, if the robot detects a line on ether the right or
   // left of the robot and wh where just in quadrent 1
-  //if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
-  if( quadrent == 1 && (canMoveRight() || canMoveLeft()))
+  if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
+  //if( quadrent == 1 && (canMoveRight() || canMoveLeft()))
   {
     quadrent = 2;
-    setMoterVoltages(0,0);
+    //setMoterVoltages(0,0);
     
-    DEFAULT_VOLTAGE = 37;
+    DEFAULT_VOLTAGE = 39;
     
-    delay(2000);
+    //delay(2000);
     
     sendQuadrent();
   }
@@ -365,11 +364,11 @@ void determinQuadrent()
   if( quadrent == 2 && frontShortIRNormalised == 1 )
   {
     quadrent = 3;
-    setMoterVoltages(0,0);
+    //setMoterVoltages(0,0);
     
     //DEFAULT_VOLTAGE = 60;
     
-    delay(2000);
+    //delay(2000);
     
     sendQuadrent();
   }
@@ -581,7 +580,7 @@ void moveQuadrent4()
     // Update the moter voltage pins
     setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
-  else if ( rightShortIRNormalised == 0 ) turnRight();
+  else if ( rightShortIRNormalised == 0 && frontShortIRNormalised == 1  ) turnRight();
   else setMoterVoltages(0,0);
   
   lastLeftIRReading = leftIRReading;
@@ -784,11 +783,13 @@ void turnRight()
   //setMoterVoltages(0,0);
   //delay( 4000);
   
-  if( quadrent != 4 ) backPreRotationMove();
-  else preRotationMove();
+  //if( quadrent != 4 ) backPreRotationMove();
+  //else preRotationMove();
   
   //setMoterVoltages(0,0);
   //delay( 4000 );
+  
+  
   
   //boadcastRadio("Turning Right    ");
   Serial.println("Turning Right");
@@ -842,7 +843,7 @@ void turnAround()
   //setMoterVoltages(0,0);
   //delay( 4000);
   
-  backPreRotationMove();
+  //backPreRotationMove();
   
   //setMoterVoltages(0,0);
   //delay( 4000 );
@@ -902,7 +903,7 @@ void preRotationMove()
     
   //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
     
-  delay(150);
+  delay(250);
     
   setMoterVoltages(0, 0);
   //delay(350);
