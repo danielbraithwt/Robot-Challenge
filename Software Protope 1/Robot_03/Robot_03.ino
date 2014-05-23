@@ -11,6 +11,9 @@ int LEFT_SHORT_IR_SENSOR_PIN = 3;
 int RIGHT_IR_SENSOR_PIN = 2;
 int RIGHT_SHORT_IR_SENSOR_PIN = 4;
 
+// Analog pin for the back short range sensor
+int BACK_SHORT_IR_SENSOR_PIN = 5;
+
 // Pins that control the voltage to the moters
 int VOLTAGE_MOTER1 = 11;
 int VOLTAGE_MOTER2 = 3;
@@ -47,6 +50,7 @@ int frontIRReading = 0;
 int frontShortIRNormalised = 0;
 int leftShortIRNormalised = 0;
 int rightShortIRNormalised = 0;
+int backShortIRNormalised = 0;
 
 // Left IR sensor values
 double leftIRReading = 0;
@@ -74,12 +78,12 @@ boolean wasRight = false;
 //float KP = 1.1;0
 //float KD = 2;
 float KP = 0.5;
-float KD = 2.8;
+float KD = 2.7;
 
 
 
 // Stores the current quadrent the robot is in
-int quadrent = 1;
+int quadrent = 4;
 
 void setup()
 {
@@ -197,6 +201,11 @@ void readFrontShortIRSensor()
   //if( frontIRReading > 200 ) frontIRNormalised = 0;
   //else frontIRNormalised = 1;
   frontShortIRNormalised = readShortIRSensor(FRONT_IR_SENSOR_PIN);
+}
+
+void readBackShortIRSensor()
+{
+  backShortIRNormalised = readShortIRSensor(BACK_SHORT_IR_SENSOR_PIN);
 }
 
 void readLeftShortIRSensor()
@@ -346,7 +355,8 @@ void determinQuadrent()
 { 
   // Detect quadrent 2, if the robot detects a line on ether the right or
   // left of the robot and wh where just in quadrent 1
-  if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
+  //if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
+  if( quadrent == 1 && isAllWhite() )
   //if( quadrent == 1 && (canMoveRight() || canMoveLeft()))
   {
     quadrent = 2;
@@ -561,14 +571,15 @@ void moveQuadrent4()
   float KP4 = 0.7;
   float KD4 = 1.4;
   
+  int diffrence = 0;
   // Diffrence will be negative if you need to move right, and positive if you need to move left
-  //double diffrence = leftIRReading - rightIRReading;
-  double diffrence = leftIRReading - lastLeftIRReading;
+  if( rightShortIRNormalised == 1 ) double diffrence = leftIRReading - rightIRReading;
+  else double diffrence = leftIRReading - lastLeftIRReading;
   
   if( leftShortIRNormalised == 0 ) turnLeft();
   else if( frontShortIRNormalised == 0 )
   {
-    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence))/5;
+    int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
   
     int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
   
@@ -581,6 +592,7 @@ void moveQuadrent4()
     setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
   }
   else if ( rightShortIRNormalised == 0 && frontShortIRNormalised == 1  ) turnRight();
+  else if( rightShortIRNormalised == 1 && leftShortIRNormalised == 1 && frontShortIRNormalised == 1 ) turnAround();
   else setMoterVoltages(0,0);
   
   lastLeftIRReading = leftIRReading;
@@ -763,8 +775,14 @@ void turnLeft()
   }
   else
   {
+    readBackShortIRSensor();
     
-    delay(300);
+    while( backShortIRNormalised == 0 )
+    {
+      readBackShortIRSensor();
+    }
+    
+    //delay(300);
     //while( leftIRReading != 0 );
     
   }
@@ -816,7 +834,13 @@ void turnRight()
   else 
   {
     
-    delay( 300 );
+    readBackShortIRSensor();
+    
+    while( backShortIRNormalised == 0 )
+    {
+      readBackShortIRSensor();
+    }
+    //delay( 300 );
     //readLeftIRSensor();
     
     //while( abs( origonalLeftReading - leftIRReading ) > 0.1 )
@@ -913,6 +937,20 @@ void preRotationMove()
 
 void backPreRotationMove()
 {
+  setMoterVoltages(0, 0);
+    
+  digitalWrite(DIRECTION_MOTER1, LOW);
+  digitalWrite(DIRECTION_MOTER2, LOW);
+    
+  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+    
+  delay(300);
+    
+  setMoterVoltages(0, 0);
+    
+  digitalWrite(DIRECTION_MOTER1, HIGH);
+  digitalWrite(DIRECTION_MOTER2, HIGH);
+  
   if( quadrent != 4 )
   {
     setMoterVoltages(0, 0);
