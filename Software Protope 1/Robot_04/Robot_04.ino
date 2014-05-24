@@ -581,7 +581,7 @@ void moveQuadrent4()
 {    
   DEFAULT_VOLTAGE = 42;
   
-  float KP4 = 1.4;
+  float KP4 = 2;
   float KD4 = 5;
   
   if( canMoveRight() ) 
@@ -615,18 +615,16 @@ void moveQuadrent4()
   {
     DEFAULT_VOLTAGE = 55;
   
-    double diffrence = (leftIRReading - rightIRReading);
+    //double diffrence = (leftIRReading - rightIRReading);
     //double diffrence = 70
     
     
-    
-    
  
-    //double diffrence = 0;
-    //if( leftShortIRNormalised == 0 ) diffrence = leftIRReading - rightIRReading;
-    //else diffrence = lastRightIRReading - rightIRReading;
+    double diffrence = 0;
+    if( leftShortIRNormalised == 0 ) diffrence = leftIRReading - rightIRReading;
+    else diffrence = lastRightIRReading - rightIRReading;
     
-    //if( abs( diffrence - lastDiffrence ) > 5 ) diffrence = lastDiffrence;
+    if( abs( diffrence - lastDiffrence ) > 5 ) diffrence = lastDiffrence;
     
     int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
   
