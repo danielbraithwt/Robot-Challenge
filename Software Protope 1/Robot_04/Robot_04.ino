@@ -11,9 +11,6 @@ int LEFT_SHORT_IR_SENSOR_PIN = 3;
 int RIGHT_IR_SENSOR_PIN = 2;
 int RIGHT_SHORT_IR_SENSOR_PIN = 4;
 
-// Analog pin for the back short range sensor
-int BACK_SHORT_IR_SENSOR_PIN = 5;
-
 // Pins that control the voltage to the moters
 int VOLTAGE_MOTER1 = 11;
 int VOLTAGE_MOTER2 = 3;
@@ -50,7 +47,6 @@ int frontIRReading = 0;
 int frontShortIRNormalised = 0;
 int leftShortIRNormalised = 0;
 int rightShortIRNormalised = 0;
-int backShortIRNormalised = 0;
 
 // Left IR sensor values
 double leftIRReading = 0;
@@ -58,8 +54,6 @@ double lastLeftIRReading = 0;
 
 // Right IR sensor values
 double rightIRReading = 0;
-
-//
 double lastRightIRReading = 0;
 
 // Stores the current error
@@ -76,27 +70,22 @@ double lastDiffrence = 0;
 boolean wasRight = false;
 
 //
-boolean ignoreWalls = false;
+boolean wasOnLine = false;
 
 //
-boolean turnedLeft = false;
-
-//
-boolean turnedRight = false;
+double centerLeft = 0;
+double centerRight = 0;
 
 //float KP = 0.9;
 //float KD = 2;
 
 //float KP = 1.1;0
 //float KD = 2;
-float KP = 0.4;
-float KD = 2.6;
-
-//
-double quad4Intergril = 0;
+float KP = 0.8;
+float KD = 3.2;
 
 // Stores the current quadrent the robot is in
-int quadrent = 4;
+int quadrent = 1;
 
 void setup()
 {
@@ -104,7 +93,7 @@ void setup()
 
   boadcastRadio("Connecting      ");
 
-  
+  //delay(10000);
 
   // Setup the moter controll pins
   pinMode(VOLTAGE_MOTER1, OUTPUT);
@@ -143,8 +132,7 @@ void loop()
   // on the side of the robot
   if( quadrent >= 3 )
   {
-    //
-    //readFrontShortIRSensor();
+    //Serial.println("ARRG");
     
     // Read from the left IR sensor
     
@@ -196,11 +184,11 @@ void readQTRSensor()
     else normalisedOutput[i] = 1;
     
     // TESTING: Print this out to see what is happerning
-    Serial.print(normalisedOutput[i]);
-    Serial.print(" ");
+    //Serial.print(normalisedOutput[i]);
+    //Serial.print(" ");
   }
   
-  Serial.println();
+  //Serial.println();
 }
 
 /*
@@ -219,14 +207,11 @@ void readFrontShortIRSensor()
   frontShortIRNormalised = readShortIRSensor(FRONT_IR_SENSOR_PIN);
 }
 
-void readBackShortIRSensor()
-{
-  backShortIRNormalised = readShortIRSensor(BACK_SHORT_IR_SENSOR_PIN);
-}
-
 void readLeftShortIRSensor()
 {
   leftShortIRNormalised = readShortIRSensor(LEFT_SHORT_IR_SENSOR_PIN);
+  Serial.println(leftShortIRNormalised);
+  //delay(1000);
   
 }
 
@@ -256,8 +241,8 @@ void readLeftIRSensor()
 {
   leftIRReading = readLongRangeIRSensor(LEFT_IR_SENSOR_PIN);
   
-  Serial.print("Left IR Reading: ");
-  Serial.println(leftIRReading);
+  //Serial.print("Left IR Reading: ");
+  //Serial.println(leftIRReading);
 }
 
 /*
@@ -268,8 +253,8 @@ void readRightIRSensor()
 {
   rightIRReading = readLongRangeIRSensor(RIGHT_IR_SENSOR_PIN);
   
-  Serial.print("Right IR Reading: ");
-  Serial.println(rightIRReading);
+  //Serial.print("Right IR Reading: ");
+  //Serial.println(rightIRReading);
 }
 
 /*
@@ -279,8 +264,16 @@ void readRightIRSensor()
  */
 double readLongRangeIRSensor( int pin )
 {
+  // Get the reading from the analog pin
+  int reading = analogRead(pin);
+  
+  // Use the formula on there website to calculate
+  // the distance, if its outside the valid range of sensor values
+  // just leave the distance as 0 because otherwise we will get incorrect distances
+  //double distance = 0;
+  
   double sum = 0;
-  int itter = 10;
+  int itter = 20;
   
   for( int i = 0; i < itter; i++ )
   {
@@ -297,6 +290,10 @@ double readLongRangeIRSensor( int pin )
     sum += distance;
     //distance = 43235.4289561224 * pow(reading, -1.1129015462);
   }
+  
+  return sum/itter;
+  
+  //distance = 43235.4289561224 * pow(reading, -1.1129015462);
   //if( reading >= 80 && reading <= 530 ) 
   //{
   //  distance= 2076.0/(reading - 11);
@@ -314,7 +311,6 @@ double readLongRangeIRSensor( int pin )
   // TESTING: Return 0 while sensors arnt connected
   //return 0;  
   //return distance;
-  return sum/itter;
   
 }
 
@@ -367,11 +363,11 @@ void calculateError()
   else error = 3500 - average;
   
   // TESTING: Will remvove these print statments later
-  Serial.print("Average: ");
-  Serial.println(average);
+  //Serial.print("Average: ");
+  //Serial.println(average);
   
-  Serial.print("Error: ");
-  Serial.println(error);
+  //Serial.print("Error: ");
+  //Serial.println(error);
 }
 
 /*
@@ -382,8 +378,7 @@ void determinQuadrent()
 { 
   // Detect quadrent 2, if the robot detects a line on ether the right or
   // left of the robot and wh where just in quadrent 1
-  //if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
-  if( quadrent == 1 && isAllWhite() )
+  if( quadrent == 1 && abs(lastError) <= 500 && (canMoveRight() || canMoveLeft())) 
   //if( quadrent == 1 && (canMoveRight() || canMoveLeft()))
   {
     quadrent = 2;
@@ -416,10 +411,11 @@ void determinQuadrent()
   {
     quadrent = 4;
     
-    DEFAULT_VOLTAGE = 35;
     
-    setMoterVoltages(0,0);
-    delay(2000);
+    //centerLeft = readLeftIRSensor();
+    //centerRight = readRightIRSensor();
+    //setMoterVoltages(0,0);
+    //delay(2000);
     
     sendQuadrent();
   }
@@ -534,13 +530,13 @@ void moveQuadrent1()
   int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
   // TESTING: Will remvove these print statments later
-  Serial.print("Voltage Adjustment: ");
-  Serial.println(voltageAdjustment);
+  //Serial.print("Voltage Adjustment: ");
+  //Serial.println(voltageAdjustment);
   
-  Serial.print("Left Moter: ");
-  Serial.print(leftMoterVoltage);
-  Serial.print(". Right Moter: ");
-  Serial.println(rightMoterVoltage);
+  //Serial.print("Left Moter: ");
+  //Serial.print(leftMoterVoltage);
+  //Serial.print(". Right Moter: ");
+  //Serial.println(rightMoterVoltage);
   
   // Update the moter voltage pins
   setMoterVoltages( leftMoterVoltage, rightMoterVoltage + RIGHT_MOTER_OFFSET );
@@ -556,21 +552,7 @@ void moveQuadrent2()
   if( canMoveLeft() ) turnLeft();
   else if( canMoveFoward() ) moveQuadrent1();
   else if( wasRight ) 
-  {
-    //setMoterVoltages(0, 0);
-    
-    //digitalWrite(DIRECTION_MOTER1, LOW);
-    //digitalWrite(DIRECTION_MOTER2, LOW);
-    
-    //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
-    
-    //while( !canMoveFoward() ) readQTRSensor();
-    
-    //setMoterVoltages(0, 0);
-    
-    //digitalWrite(DIRECTION_MOTER1, HIGH);
-    //digitalWrite(DIRECTION_MOTER2, HIGH);
-    
+  { 
     turnRight();
   }
   else if( quadrent != 4 ) turnAround();
@@ -596,184 +578,89 @@ void moveQuadrent3()
  * Determins how to move in quadrent 4
  */
 void moveQuadrent4() 
-{ 
-  DEFAULT_VOLTAGE = 40;
+{    
+  DEFAULT_VOLTAGE = 42;
   
-  //float KP4 = 0.7;
-  //float KD4 = 1.4;
-  
-  //float KP4 = 0.5;
-  //float KD4 = 0.9;
-  
-  //float KP4 = 0.5;
-  //float KD4 = 6;
-  
-  float KP4 = 1.2;
-  float KI4 = 0.001;
+  float KP4 = 1.4;
   float KD4 = 5;
   
-  //double diffrence = diffrence = leftIRReading - rightIRReading;
-  //double diffrence = rightIRReading - lastRightIRReading;
-  
-  //lastRightIRReading = rightIRReading;
-  
-  //int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
-  
-  //int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
-  
-  //int leftMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
-  
-  //if( leftMoterVoltage < 0 ) digitalWrite(DIRECTION_MOTER1, LOW);
-  //else digitalWrite(DIRECTION_MOTER1, HIGH);
-  
-  //if( rightMoterVoltage < 0 ) digitalWrite(DIRECTION_MOTER2, LOW);
-  //else digitalWrite(DIRECTION_MOTER2, HIGH);
-  
-  //Serial.print("Quad 4 Voltage Adjustment ");
-  //Serial.println(voltageAdjustment);
-   
-  // Update the moter voltage pins
-  //setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
-  
-  //Serial.println("Moving Foward");
-  //int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence) + KI4*(quad4Intergril));
-  
-  //int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
-  
-  //int leftMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
-  
-  //Serial.print("Quad 4 Voltage Adjustment ");
-  //Serial.println(voltageAdjustment);
-   
-  // Update the moter voltage pins
-  //setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
-  
-  //quad4Intergril += diffrence;
-  
-  if( leftShortIRNormalised = 1 ) turnedLeft = false;
-  if( rightShortIRNormalised = 1 ) turnedRight = false;
-  
-  int diffrence = 0;
-  // Diffrence will be negative if you need to move right, and positive if you need to move left
-  if( rightShortIRNormalised == 1 && leftShortIRNormalised == 1 ) diffrence = leftIRReading - rightIRReading;
-  else diffrence = (rightIRReading - lastRightIRReading);
-  
-  if( abs( diffrence - lastDiffrence ) > 5 ) diffrence = lastDiffrence;
-  
-  Serial.println(rightShortIRNormalised);
-  delay(1000);
-  
-  if( rightShortIRNormalised == 0 )
+  if( canMoveRight() ) 
   {
-    Serial.println("Turning right");
-    delay(2000);
-    turnRightQuad4();
-    turnedRight = true;
+    DEFAULT_VOLTAGE = 44;
+    turnRight();
+    DEFAULT_VOLTAGE = 42;
   }
-  if( frontShortIRNormalised == 0 )
+  else if( canMoveLeft() ) 
   {
-    Serial.println("Moving Foward");
+    DEFAULT_VOLTAGE = 44;
+    turnLeft();
+    DEFAULT_VOLTAGE = 42;
+  }
+  else if( canMoveFoward() ) 
+  {
+    moveQuadrent1();
+    wasOnLine = true;
+  }
+  else if( wasOnLine )
+  {
+    setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
+    
+    //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
+  
+    delay(150);
+    
+    setMoterVoltages(0, 0);
+  }
+  else
+  {
+    DEFAULT_VOLTAGE = 55;
+  
+    double diffrence = (leftIRReading - rightIRReading);
+    //double diffrence = 70
+    
+    
+    
+    
+ 
+    //double diffrence = 0;
+    //if( leftShortIRNormalised == 0 ) diffrence = leftIRReading - rightIRReading;
+    //else diffrence = lastRightIRReading - rightIRReading;
+    
+    //if( abs( diffrence - lastDiffrence ) > 5 ) diffrence = lastDiffrence;
+    
     int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
   
     int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
   
     int leftMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
   
-    Serial.print("Quad 4 Voltage Adjustment ");
-    Serial.println(voltageAdjustment);
+    //Serial.print("Quad 4 Voltage Adjustment ");
+    //Serial.println(voltageAdjustment);
    
     // Update the moter voltage pins
     setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
     
+    lastDiffrence = diffrence;
+    
+    DEFAULT_VOLTAGE = 42;
   }
   
-  else if( leftShortIRNormalised == 0 && !turnedLeft )
-  {
-    turnLeftQuad4();
-    turnedLeft = true;
-  }
-  
-  
-  //diffrence = leftIRReading - rightIRReading;
-    
-  //if( isLine() ) 
-  //{
-  //  moveQuadrent2();
-  //  ignoreWalls = true;
-  //}
-  //else if( ignoreWalls )
-  //{ 
-  //  digitalWrite(DIRECTION_MOTER1, HIGH);
-  //  digitalWrite(DIRECTION_MOTER2, HIGH);
-    
-  //  setMoterVoltages(39, 39);
-  //  delay( 500 );
-  //  setMoterVoltages(0,0);
-  //  ignoreWalls = false;
-  //}
-  
-  //if( leftShortIRNormalised == 1 && rightShortIRNormalised == 1 ) turnedLeft = false;
-  
-  //else if( leftShortIRNormalised == 0 )//&& !ignoreWalls ) 
-  //if( leftShortIRNormalised == 0 && !turnedLeft )
-  //{
-  //  turnedLeft = true;
-    //if( ignoreWalls ) ignoreWalls = false;
-  //  turnLeftQuad4();
-  //}
-  //else if( frontShortIRNormalised == 0 )
-  //{
-  //  int voltageAdjustment = ((KP4)*diffrence + KD4*(diffrence - lastDiffrence));
-  
-  //  int rightMoterVoltage = (DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET) + voltageAdjustment;  
-  
-  //  int leftMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
-  
-  //  Serial.print("Quad 4 Voltage Adjustment ");
-  //  Serial.println(voltageAdjustment);
-   
-    // Update the moter voltage pins
-  //  setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
-  //}
-  //else if ( rightShortIRNormalised == 0 && frontShortIRNormalised == 1  ) turnRightQuad4();
-  //else if( rightShortIRNormalised == 1 && leftShortIRNormalised == 1 && frontShortIRNormalised == 1 ) turnAround();
-  //else setMoterVoltages(0,0);
-  
-  //lastLeftIRReading = leftIRReading;
-   
-  //if( frontIRNormalised == 1 )
-  //{
-  //  if ( rightIRReading == 0 && leftIRReading == 0 ) turnAround();
-  //  else if( rightIRReading == 0 ) turnRight();
-  //  else if( leftIRReading == 0 ) turnLeft();
-  //}
-  //else
-  //{
-  //  int voltageAdjustment = ((KP)*diffrence + KD*(diffrence - lastDiffrence));
-  
-    // Add the adjustment to left because if we want it to turn left 
-    // the left moter voltage should be less than the right moter voltage
-    // and the error is negative if robot needs to turn left
-  //  int leftMoterVoltage = DEFAULT_VOLTAGE + voltageAdjustment;
-    
-    // TESTING: Remove these print staments later
-  //  Serial.print("Quad 4 Voltage Adjustment");
-  //  Serial.println(voltageAdjustment);
-  
-    // Substract the adjustment from the right moter voltage
-  //  int rightMoterVoltage = DEFAULT_VOLTAGE - voltageAdjustment;
-  
-    // Update the moter voltage pins
-  //  setMoterVoltages( leftMoterVoltage, rightMoterVoltage );
-  //}
-  
-  
-  
-  // Keep track of the last error
-  lastDiffrence = diffrence;
-  
-  //
   lastRightIRReading = rightIRReading;
+  
+  delay(150);
+  setMoterVoltages(0,0);
+}
+
+boolean isOnLine()
+{
+  for( int i = 0; i < numberOfSensors; i++ )
+  {
+    if( normalisedOutput[i] == 1 ) return true;
+    
+  }
+  
+  return false;
+  
 }
 
 /*
@@ -809,7 +696,7 @@ boolean canMoveRight()
   
   if( leftCount >= 4 ) 
   {
-    boadcastRadio("Can Turn Right  ");
+    //boadcastRadio("Can Turn Right  ");
     return true;
   }
   return false;
@@ -833,7 +720,7 @@ boolean canMoveLeft()
   
   if( rightCount >= 4 ) 
   {
-    boadcastRadio("Can Turn Left   ");
+    //boadcastRadio("Can Turn Left   ");
     return true;
   }
   return false;
@@ -875,20 +762,7 @@ boolean isCenteredOnLine()
     
     if(count == 2) 
     {
-      boadcastRadio("Is Centered On L");
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-boolean isLine()
-{
-  for( int i = 0; i < numberOfSensors; i++ )
-  {
-    if( normalisedOutput[i] == 1 ) 
-    {
+      //boadcastRadio("Is Centered On L");
       return true;
     }
   }
@@ -913,11 +787,9 @@ boolean isAllWhite()
  */
 void turnLeft() 
 {
-  //if( quadrent == 4 ) backPreRotationMove();
-  
   //boadcastRadio("Turning Left    ");
-  Serial.println("Turning Left");
-  if(quadrent != 4) preRotationMove();
+  //Serial.println("Turning Left");
+  preRotationMove();
   
   //digitalWrite(DIRECTION_MOTER1, HIGH);
   //digitalWrite(DIRECTION_MOTER2, LOW);
@@ -930,43 +802,13 @@ void turnLeft()
   
   while(!isCenteredOnLine())
   {
-    //delay(rotationPeriodMil);
+    delay(rotationPeriodMil);
   }
   
   setMoterVoltages(0, 0);
   
   digitalWrite(DIRECTION_MOTER1, HIGH);
   digitalWrite(DIRECTION_MOTER2, HIGH);
-}
-
-void turnLeftQuad4()
-{
-  
-  preRotationMoveQuad4();
-  //readBackShortIRSensor();
-    
-  digitalWrite(DIRECTION_MOTER1, LOW);
-  digitalWrite(DIRECTION_MOTER2, HIGH);
-  
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );  
-  
-  //readBackShortIRSensor();
-    
-  //while( backShortIRNormalised == 0 )
-  //{
-  //  readBackShortIRSensor();
-  //}
-  
-  delay(1200);
-  
-  setMoterVoltages(0, 0);
-  
-  digitalWrite(DIRECTION_MOTER1, HIGH);
-  digitalWrite(DIRECTION_MOTER2, HIGH);
-  
-  
-  
-  
 }
 
 /*
@@ -977,7 +819,7 @@ void turnRight()
   //setMoterVoltages(0,0);
   //delay( 4000);
   
-  //if( quadrent == 4 ) 
+  //if( quadrent != 4 ) backPreRotationMove();
   //else preRotationMove();
   
   //setMoterVoltages(0,0);
@@ -986,10 +828,10 @@ void turnRight()
   
   
   //boadcastRadio("Turning Right    ");
-  Serial.println("Turning Right");
+  //Serial.println("Turning Right");
   //preRotationMove();
   
-  //double origonalLeftReading = leftIRReading;
+  double origonalLeftReading = leftIRReading;
   
   //digitalWrite(DIRECTION_MOTER1, LOW);
   //digitalWrite(DIRECTION_MOTER2, HIGH);
@@ -1002,66 +844,10 @@ void turnRight()
   
   while(!isCenteredOnLine())
   {
-    //delay(rotationPeriodMil);
+    delay(rotationPeriodMil);
   }
-  
-  setMoterVoltages(0, 0);
-  
-  digitalWrite(DIRECTION_MOTER1, HIGH);
-  digitalWrite(DIRECTION_MOTER2, HIGH);
-}
 
-void turnRightQuad4()
-{
-  preRotationMoveQuad4();
-  backPreRotationMove();
-  
-  //readLeftIRSensor();
-  //double startingRead = leftIRReading;
-  
-  //setMoterVoltages(0,0);
-  //setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE);
-  //delay(300);
-  
-  digitalWrite(DIRECTION_MOTER1, HIGH);
-  digitalWrite(DIRECTION_MOTER2, LOW);
-  
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
-  delay(300);
-  
-  //readBackShortIRSensor();
-  //readLeftShortIRSensor();
-  //readRightShortIRSensor();
-  //readFrontShortIRSensor();
-  //readLeftIRSensor();
-   
-  //abs(leftIRReading - startingRead) > 0.6 &&
-  
-  //while(  backShortIRNormalised == 1 && leftShortIRNormalised == 1 )
-  //{
-  //  readBackShortIRSensor();
-  //  readLeftShortIRSensor();
-  //  delay(100);
-    //readLeftIRSensor();
-  //}
-  
-  //delay(350);
-  
-  //delay(1100);
-  
-  while( backShortIRNormalised == 0 )
-  {
-    readBackShortIRSensor();
-    //delay(100);
-  }
-    
-  //while( backShortIRNormalised == 0 || leftShortIRNormalised == 0 || rightShortIRNormalised == 1 || frontShortIRNormalised == 1 )
-  //{
-  //  readBackShortIRSensor();
-  //  readLeftShortIRSensor();
-  //  readRightShortIRSensor();
-  //  readFrontShortIRSensor();
-  //}
+
   
   setMoterVoltages(0, 0);
   
@@ -1085,7 +871,7 @@ void turnAround()
   //backPreRotationMove();
   
   //boadcastRadio("Turning Around  ");
-  Serial.println("Turning Around");
+  //Serial.println("Turning Around");
   digitalWrite(DIRECTION_MOTER1, HIGH);
   digitalWrite(DIRECTION_MOTER2, LOW);
   
@@ -1136,24 +922,9 @@ void preRotationMove()
   setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
     
   //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
-    
-  delay(250);
-    
-  setMoterVoltages(0, 0);
-  //delay(350);
-  //delay(100);
-  //delay(200);
-}
-
-void preRotationMoveQuad4()
-{
-  // If we are in quadrent 4 we dont need to move 
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
-    
-  //while( canMoveLeft() || canMoveRight() ) readQTRSensor();
-    
-  while( frontShortIRNormalised == 0 ) readFrontShortIRSensor();  
-  //delay(500);
+  
+  if( quadrent == 4 ) delay(400);
+  else delay(250);
     
   setMoterVoltages(0, 0);
   //delay(350);
@@ -1163,20 +934,6 @@ void preRotationMoveQuad4()
 
 void backPreRotationMove()
 {
-  setMoterVoltages(0, 0);
-    
-  digitalWrite(DIRECTION_MOTER1, LOW);
-  digitalWrite(DIRECTION_MOTER2, LOW);
-    
-  setMoterVoltages(DEFAULT_VOLTAGE, DEFAULT_VOLTAGE + RIGHT_MOTER_OFFSET );
-    
-  delay(150);
-    
-  setMoterVoltages(0, 0);
-    
-  digitalWrite(DIRECTION_MOTER1, HIGH);
-  digitalWrite(DIRECTION_MOTER2, HIGH);
-  
   if( quadrent != 4 )
   {
     setMoterVoltages(0, 0);
@@ -1209,4 +966,5 @@ void setMoterVoltages( int newLeftVoltage, int newRightVoltage )
   analogWrite(VOLTAGE_MOTER1, newLeftVoltage);
   analogWrite(VOLTAGE_MOTER2, newRightVoltage);
 }
+
 
